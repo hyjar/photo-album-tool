@@ -14,6 +14,6 @@
     "puppeteer-core": "^25.1.0"
   },
   "devDependencies": {
-    "vite": "^8.0.16"
+    "vite": "^5.4.21"
   }
 }
