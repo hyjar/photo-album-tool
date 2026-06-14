@@ -40,6 +40,25 @@ const state = {
 
   // 新增：竖横自适应
   autoOrient: false,
+
+  // 新增：网格列数
+  gridColumns: 2,
+
+  // 新增：智能分类
+  classification: {
+    enabled: false,
+    mode: 'orientation',
+    results: {},
+    manualOverrides: {},
+    sortStrategy: 'orientation-then-category',
+  },
+
+  // 新增：多选（用于交换）
+  selectedElementIds: [],
+
+  // 新增：页眉页脚样式
+  headerStyle: { fontSize: 10, fontFamily: 'system-ui', color: '#888888' },
+  footerStyle: { fontSize: 10, fontFamily: 'system-ui', color: '#888888' },
   selectedImageId: null,
   selectedImageProps: {
     width: 100,
@@ -79,6 +98,10 @@ function pushSnapshot() {
     headerText: state.headerText,
     footerText: state.footerText,
     autoOrient: state.autoOrient,
+    gridColumns: state.gridColumns,
+    classification: deepClone(state.classification),
+    headerStyle: { ...state.headerStyle },
+    footerStyle: { ...state.footerStyle },
   });
   if (history.undoStack.length > history.maxSize) history.undoStack.shift();
   history.redoStack = [];
@@ -99,6 +122,10 @@ function restoreSnapshot(snap) {
   state.headerText = snap.headerText;
   state.footerText = snap.footerText;
   state.autoOrient = snap.autoOrient || false;
+  state.gridColumns = snap.gridColumns || 2;
+  if (snap.classification) state.classification = snap.classification;
+  if (snap.headerStyle) Object.assign(state.headerStyle, snap.headerStyle);
+  if (snap.footerStyle) Object.assign(state.footerStyle, snap.footerStyle);
 }
 
 function saveForRedo() {
@@ -222,6 +249,84 @@ export function setHeaderFooter(h, f) {
   notify();
 }
 
+// ====== 网格列数 ======
+export function setGridColumns(cols) {
+  state.gridColumns = cols;
+  notify();
+}
+
+// ====== 页眉页脚样式 ======
+export function setHeaderStyle(style) {
+  pushSnapshot();
+  Object.assign(state.headerStyle, style);
+  notify();
+}
+export function setFooterStyle(style) {
+  pushSnapshot();
+  Object.assign(state.footerStyle, style);
+  notify();
+}
+
+// ====== 智能分类 ======
+export function setClassificationEnabled(enabled) {
+  state.classification.enabled = enabled;
+  notify();
+}
+export function setClassificationMode(mode) {
+  state.classification.mode = mode;
+  notify();
+}
+export function setClassificationResults(results) {
+  state.classification.results = results;
+  notify();
+}
+export function setManualCategory(imageId, category) {
+  state.classification.manualOverrides[imageId] = category;
+  notify();
+}
+export function getClassificationForImage(imageId) {
+  return state.classification.manualOverrides[imageId]
+    || state.classification.results[imageId]
+    || null;
+}
+
+// ====== 多选与交换 ======
+export function toggleElementSelection(elementId) {
+  const idx = state.selectedElementIds.indexOf(elementId);
+  if (idx >= 0) {
+    state.selectedElementIds.splice(idx, 1);
+  } else if (state.selectedElementIds.length < 2) {
+    state.selectedElementIds.push(elementId);
+  } else {
+    state.selectedElementIds = [elementId];
+  }
+  notify();
+}
+export function clearElementSelection() {
+  state.selectedElementIds = [];
+  notify();
+}
+export function swapElements(pageId, elemId1, elemId2) {
+  pushSnapshot();
+  const page = state.pages.find(p => p.id === pageId);
+  if (!page) return;
+  const e1 = page.elements.find(e => e.id === elemId1);
+  const e2 = page.elements.find(e => e.id === elemId2);
+  if (!e1 || !e2) return;
+  const temp = { x: e1.x, y: e1.y, w: e1.w, h: e1.h };
+  Object.assign(e1, { x: e2.x, y: e2.y, w: e2.w, h: e2.h });
+  Object.assign(e2, temp);
+  state.selectedElementIds = [];
+  notify();
+}
+
+// ====== 全局背景 ======
+export function setAllPageBackgrounds(bg) {
+  pushSnapshot();
+  state.pages.forEach(p => { p.background = bg; });
+  notify();
+}
+
 // ====== 文字页面 ======
 export function addTextPage(tp) {
   pushSnapshot();
@@ -340,7 +445,7 @@ export function addTextOverlay(pageId) {
     type: 'text',
     text: '双击编辑',
     x: 20, y: 20, w: 100, h: 30,
-    style: { fontSize: 16, color: '#ffffff', bold: false, italic: false, underline: false, stroke: true, strokeColor: '#000000' },
+    style: { fontSize: 16, color: '#ffffff', bold: false, italic: false, underline: false, stroke: true, strokeColor: '#000000', fontFamily: 'system-ui', textAlign: 'left', lineHeight: 1.4 },
   });
   notify();
 }
@@ -385,6 +490,10 @@ export function exportState() {
     headerText: state.headerText,
     footerText: state.footerText,
     autoOrient: state.autoOrient,
+    gridColumns: state.gridColumns,
+    classification: deepClone(state.classification),
+    headerStyle: { ...state.headerStyle },
+    footerStyle: { ...state.footerStyle },
     savedAt: new Date().toISOString(),
   };
 }
@@ -411,6 +520,10 @@ export function importState(saved, imageMap) {
   state.headerText = saved.headerText || '';
   state.footerText = saved.footerText || '';
   state.autoOrient = saved.autoOrient || false;
+  state.gridColumns = saved.gridColumns || 2;
+  if (saved.classification) state.classification = saved.classification;
+  if (saved.headerStyle) Object.assign(state.headerStyle, saved.headerStyle);
+  if (saved.footerStyle) Object.assign(state.footerStyle, saved.footerStyle);
   notify();
 }
 

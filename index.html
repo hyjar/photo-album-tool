@@ -60,6 +60,32 @@
         </div>
       </section>
 
+      <!-- 智能分类 -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>智能分类</h3>
+          <label class="classify-toggle">
+            <input type="checkbox" id="classify-enabled">
+            <span>启用</span>
+          </label>
+        </div>
+        <div id="classify-controls" class="theme-controls" style="display:none">
+          <label class="control-row">
+            <span>分类方式</span>
+            <select id="classify-mode">
+              <option value="orientation">按方向</option>
+              <option value="category">按内容</option>
+              <option value="both">方向+内容</option>
+            </select>
+          </label>
+          <div class="classify-actions">
+            <button id="btn-classify" class="small-btn">重新分类</button>
+            <button id="btn-sort-by-class" class="small-btn accent">按分类排序</button>
+          </div>
+          <div id="classify-summary" class="classify-summary"></div>
+        </div>
+      </section>
+
       <!-- 排版模板 -->
       <section class="sidebar-section">
         <div class="section-header"><h3>排版模板</h3></div>
@@ -89,6 +115,14 @@
           <div class="fit-btns">
             <button id="fit-cover" class="fit-btn active" title="裁剪填满">裁剪填满</button>
             <button id="fit-contain" class="fit-btn" title="完整显示留白">完整显示</button>
+          </div>
+        </div>
+        <!-- 网格列数（仅网格模式显示） -->
+        <div id="grid-columns-group" class="fit-mode-group" style="display:none">
+          <span class="control-label">列数</span>
+          <div class="fit-btns">
+            <button id="grid-cols-2" class="fit-btn active">2列</button>
+            <button id="grid-cols-3" class="fit-btn">3列</button>
           </div>
         </div>
       </section>
@@ -155,6 +189,7 @@
             </select>
           </div>
           <button id="bg-apply" class="small-btn" style="margin-top:6px">应用到当前页</button>
+          <button id="bg-apply-all" class="small-btn" style="margin-top:6px">应用到所有页</button>
         </div>
       </section>
 
@@ -185,10 +220,28 @@
             <span>页眉</span>
             <input type="text" id="header-text" placeholder="输入页眉文字" class="text-input">
           </label>
+          <div class="header-footer-style">
+            <select id="header-font-size">
+              <option value="8">8px</option>
+              <option value="10" selected>10px</option>
+              <option value="12">12px</option>
+              <option value="14">14px</option>
+            </select>
+            <input type="color" id="header-color" value="#888888" title="页眉颜色">
+          </div>
           <label class="control-row">
             <span>页脚</span>
             <input type="text" id="footer-text" placeholder="输入页脚文字" class="text-input">
           </label>
+          <div class="header-footer-style">
+            <select id="footer-font-size">
+              <option value="8">8px</option>
+              <option value="10" selected>10px</option>
+              <option value="12">12px</option>
+              <option value="14">14px</option>
+            </select>
+            <input type="color" id="footer-color" value="#888888" title="页脚颜色">
+          </div>
         </div>
       </section>
 
@@ -357,6 +410,25 @@
           <span>结束页码（留空为全部）</span>
           <input type="number" id="export-end" min="1" placeholder="全部">
         </label>
+        <label class="dialog-field">
+          <span>输出质量</span>
+          <div class="range-row">
+            <input type="range" id="export-quality" min="50" max="100" value="92" step="5">
+            <span id="export-quality-label">92%</span>
+          </div>
+        </label>
+        <label class="dialog-field">
+          <span>渲染精度</span>
+          <select id="export-scale">
+            <option value="1">标准 (1x)</option>
+            <option value="2" selected>高清 (2x)</option>
+            <option value="3">超高清 (3x)</option>
+          </select>
+        </label>
+        <div id="export-progress" class="export-progress" style="display:none">
+          <div class="progress-bar"><div class="progress-fill" id="export-progress-fill"></div></div>
+          <span class="progress-text" id="export-progress-text">导出中...</span>
+        </div>
       </div>
       <div class="dialog-footer">
         <button id="export-cancel" class="btn-secondary">取消</button>

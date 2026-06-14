@@ -7,6 +7,7 @@ import { getState, updateElement, setSelectedElement, setSelectedPage, setSelect
 import { getPagePixelSize } from './layoutEngine.js';
 import { clamp } from './utils.js';
 import { renderPreviewThrottled, forceRenderPreview } from './preview.js';
+import { createInlineEditor } from './richTextEditor.js';
 
 let dragState = null;
 let guideElements = [];
@@ -317,12 +318,20 @@ function onDblClick(e) {
   for (const elem of page.elements) {
     if (x >= elem.x && x <= elem.x + elem.w && y >= elem.y && y <= elem.y + elem.h) {
       if (elem.type === 'text') {
-        const newText = prompt('编辑文字:', elem.text || '');
-        if (newText !== null) updateElement(page.id, elem.id, { text: newText });
+        createInlineEditor(e.target, {
+          value: elem.text || '',
+          rich: true,
+          onChange: (newText) => {
+            updateElement(page.id, elem.id, { text: newText });
+          }
+        });
       } else if (elem.imageId) {
-        // 双击图片编辑图注（作品集模式的元数据由 preview.js 处理）
-        const newCaption = prompt('编辑图注:', elem.caption || '');
-        if (newCaption !== null) updateElement(page.id, elem.id, { caption: newCaption });
+        createInlineEditor(e.target, {
+          value: elem.caption || '',
+          onChange: (newCaption) => {
+            updateElement(page.id, elem.id, { caption: newCaption });
+          }
+        });
       }
       return;
     }

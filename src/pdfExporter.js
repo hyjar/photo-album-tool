@@ -42,7 +42,7 @@ async function loadHtml2canvas() {
 }
 
 export async function exportPDF(options = {}) {
-  const { startPage = 1, endPage = null, fileName = null, returnBlob = false } = options;
+  const { startPage = 1, endPage = null, fileName = null, quality = 0.92, renderScale = 2, returnBlob = false, onProgress } = options;
   const PDFClass = await loadJsPDF();
   const h2c = await loadHtml2canvas();
   const { pages, pageSize } = getState();
@@ -52,6 +52,7 @@ export async function exportPDF(options = {}) {
   const total = pages.length;
   const from = Math.max(1, Math.min(startPage, total));
   const to = endPage ? Math.min(endPage, total) : total;
+  const pageCount = to - from + 1;
 
   // 第一页尺寸
   const firstPage = pages[from - 1];
@@ -63,9 +64,6 @@ export async function exportPDF(options = {}) {
     orientation: fpOrient,
     unit: 'mm', format: [Math.min(fpW, fpH), Math.max(fpW, fpH)],
   });
-
-  // 渲染 DPI（决定截图清晰度）
-  const RENDER_SCALE = 2;
 
   let first = true;
   for (let i = from - 1; i < to; i++) {
@@ -85,15 +83,21 @@ export async function exportPDF(options = {}) {
 
     // html2canvas 截图
     const canvas = await h2c(pageEl, {
-      scale: RENDER_SCALE,
+      scale: renderScale,
       useCORS: true,
       allowTaint: true,
       backgroundColor: null,
       logging: false,
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const imgData = canvas.toDataURL('image/jpeg', quality);
     pdf.addImage(imgData, 'JPEG', 0, 0, pw, ph);
+
+    // 进度回调
+    if (onProgress) {
+      const pct = Math.round(((i - from + 2) / pageCount) * 100);
+      onProgress(pct);
+    }
   }
 
   let defaultName = fileName || `摄影集_${formatDate()}`;

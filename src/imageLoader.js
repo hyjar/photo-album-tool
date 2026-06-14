@@ -10,6 +10,7 @@
 import { uid, loadImage, el } from './utils.js';
 import { addImages, removeImage, reorderImages, getState } from './state.js';
 import { autoLayout } from './layoutEngine.js';
+import { CATEGORY_LABELS, ORIENTATION_LABELS, CATEGORY_COLORS, ORIENTATION_COLORS } from './classifier.js';
 import exifr from 'exifr';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
@@ -303,18 +304,22 @@ function readEntry(entry) {
 // 渲染缩略图列表 — 增量更新
 let _thumbContainer = null;
 let _renderedThumbIds = [];
+let _renderedClassifyKey = '';
 
 export function renderThumbnailList() {
   if (!_thumbContainer) _thumbContainer = document.getElementById('thumbnail-list');
   const container = _thumbContainer;
-  const { images } = getState();
+  const { images, classification } = getState();
 
   const newIds = images.map(i => i.id);
+  const classifyKey = classification.enabled ? JSON.stringify(classification.results) : '';
   const idsChanged = newIds.length !== _renderedThumbIds.length ||
     newIds.some((id, i) => id !== _renderedThumbIds[i]);
+  const classifyChanged = classifyKey !== _renderedClassifyKey;
 
-  if (!idsChanged) return;
+  if (!idsChanged && !classifyChanged) return;
   _renderedThumbIds = newIds;
+  _renderedClassifyKey = classifyKey;
   container.innerHTML = '';
 
   if (images.length === 0) {
@@ -327,12 +332,29 @@ export function renderThumbnailList() {
     const metaText = img.exif?.camera
       ? `${img.exif.camera} · ${img.width}×${img.height}`
       : `${img.width}×${img.height} (${sizeMB}MB)`;
+
+    // 分类标签
+    const tags = [];
+    if (classification.enabled && classification.results[img.id]) {
+      const r = classification.results[img.id];
+      const orientLabel = ORIENTATION_LABELS[r.orientation] || r.orientation;
+      const orientColor = ORIENTATION_COLORS[r.orientation] || '#95a5a6';
+      tags.push(el('span', { class: 'classify-tag-mini', style: `background:${orientColor}`, textContent: orientLabel }));
+
+      if (classification.mode !== 'orientation' && r.category) {
+        const catLabel = CATEGORY_LABELS[r.category] || r.category;
+        const catColor = CATEGORY_COLORS[r.category] || '#95a5a6';
+        tags.push(el('span', { class: 'classify-tag-mini', style: `background:${catColor}`, textContent: catLabel }));
+      }
+    }
+
     const thumb = el('div', { class: 'thumbnail', 'data-id': img.id, draggable: 'true' }, [
       el('img', { src: img.thumbURL, alt: img.name, loading: 'lazy' }),
       el('div', { class: 'thumbnail-info' }, [
         el('span', { class: 'thumbnail-name', textContent: img.name }),
         el('span', { class: 'thumbnail-size', textContent: metaText }),
-      ]),
+        tags.length ? el('div', { class: 'thumbnail-tags' }, tags) : null,
+      ].filter(Boolean)),
       el('button', {
         class: 'thumbnail-remove',
         textContent: '×',

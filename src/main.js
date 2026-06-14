@@ -9,7 +9,12 @@ import {
   addTextOverlay, toggleCaptions,
   savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient,
   updateImageProps, setLockRatio, resetImageFilters, updateElement,
+  setGridColumns, setClassificationEnabled, setClassificationMode,
+  setClassificationResults, setAllPageBackgrounds,
+  swapElements, toggleElementSelection, clearElementSelection,
+  setHeaderStyle, setFooterStyle,
 } from './state.js';
+import { classifyAllImages, clearClassificationCache, CATEGORY_LABELS, ORIENTATION_LABELS, CATEGORY_COLORS, ORIENTATION_COLORS } from './classifier.js';
 import { initImageLoader, renderThumbnailList } from './imageLoader.js';
 import { autoLayout, addTitlePage, addChapterPage, getPagePixelSize, createFreeCanvasPage } from './layoutEngine.js';
 // createFreeCanvasPage 来自 layoutEngine，避免与 state 混淆
@@ -33,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initExportDialog();
   initKeyboardShortcuts();
   initRightSidebar();
+  initClassification();
+  initGridColumns();
+  initApplyAllBackgrounds();
 
   const debouncedUpdate = debounce(() => {
     renderThumbnailList();
@@ -73,12 +81,14 @@ function initToolbar() {
     localStorage.setItem('photo-album-dark-mode', getState().darkMode);
   });
   document.getElementById('btn-add-title').addEventListener('click', () => {
-    const text = prompt('请输入标题文字:', '我的摄影集');
-    if (text) { addTitlePage(text); showToast('已添加标题页'); }
+    showInputDialog('请输入标题文字:', '我的摄影集', (text) => {
+      if (text) { addTitlePage(text); showToast('已添加标题页'); }
+    });
   });
   document.getElementById('btn-add-chapter').addEventListener('click', () => {
-    const text = prompt('请输入章节标题:', '第一章');
-    if (text) { addChapterPage(text); showToast('已添加章节页'); }
+    showInputDialog('请输入章节标题:', '第一章', (text) => {
+      if (text) { addChapterPage(text); showToast('已添加章节页'); }
+    });
   });
   document.getElementById('btn-orientation').addEventListener('click', () => {
     const { orientation } = getState();
@@ -146,6 +156,9 @@ function initTemplateSelector() {
       // 显示/隐藏裁剪模式选项
       const fitGroup = document.getElementById('fit-mode-group');
       if (fitGroup) fitGroup.style.display = t === 'single' ? 'flex' : 'none';
+      // 显示/隐藏网格列数选项
+      const gridGroup = document.getElementById('grid-columns-group');
+      if (gridGroup) gridGroup.style.display = t === 'grid' ? 'flex' : 'none';
       if (getState().images.length > 0) autoLayout();
     });
   });
@@ -230,6 +243,25 @@ function initHeaderFooter() {
   document.getElementById('footer-text').addEventListener('input', e => {
     setHeaderFooter(getState().headerText, e.target.value);
   });
+
+  // 页眉页脚样式
+  const headerFontSize = document.getElementById('header-font-size');
+  const headerColor = document.getElementById('header-color');
+  const footerFontSize = document.getElementById('footer-font-size');
+  const footerColor = document.getElementById('footer-color');
+
+  headerFontSize?.addEventListener('change', () => {
+    setHeaderStyle({ fontSize: parseInt(headerFontSize.value) });
+  });
+  headerColor?.addEventListener('input', () => {
+    setHeaderStyle({ color: headerColor.value });
+  });
+  footerFontSize?.addEventListener('change', () => {
+    setFooterStyle({ fontSize: parseInt(footerFontSize.value) });
+  });
+  footerColor?.addEventListener('input', () => {
+    setFooterStyle({ color: footerColor.value });
+  });
 }
 
 // ====== 版式预设 ======
@@ -273,20 +305,49 @@ function initPresets() {
 // ====== 导出 ======
 function initExportDialog() {
   const dialog = document.getElementById('export-dialog');
+  const qualitySlider = document.getElementById('export-quality');
+  const qualityLabel = document.getElementById('export-quality-label');
+  const progressBar = document.getElementById('export-progress');
+  const progressFill = document.getElementById('export-progress-fill');
+  const progressText = document.getElementById('export-progress-text');
+
+  // 质量滑块实时更新
+  qualitySlider?.addEventListener('input', () => {
+    qualityLabel.textContent = qualitySlider.value + '%';
+  });
+
   document.getElementById('export-close').addEventListener('click', () => dialog.classList.remove('visible'));
   document.getElementById('export-cancel').addEventListener('click', () => dialog.classList.remove('visible'));
   document.getElementById('export-confirm').addEventListener('click', async () => {
     const fileName = document.getElementById('export-filename').value.trim() || undefined;
     const startPage = parseInt(document.getElementById('export-start').value) || 1;
     const endPage = parseInt(document.getElementById('export-end').value) || undefined;
+    const quality = parseInt(qualitySlider?.value || '92') / 100;
+    const renderScale = parseInt(document.getElementById('export-scale')?.value || '2');
+
+    // 显示进度条
+    if (progressBar) {
+      progressBar.style.display = '';
+      progressFill.style.width = '0%';
+      progressText.textContent = '导出中...';
+    }
+
     dialog.classList.remove('visible');
     showToast('正在导出 PDF...');
     try {
-      await exportPDF({ startPage, endPage, fileName });
+      await exportPDF({
+        startPage, endPage, fileName, quality, renderScale,
+        onProgress: (pct) => {
+          if (progressFill) progressFill.style.width = pct + '%';
+          if (progressText) progressText.textContent = `导出中 ${pct}%`;
+        }
+      });
       showToast('PDF 导出完成');
     } catch (e) {
       console.error('导出失败:', e);
       showToast('导出失败: ' + e.message);
+    } finally {
+      if (progressBar) progressBar.style.display = 'none';
     }
   });
   dialog.addEventListener('click', e => { if (e.target === dialog) dialog.classList.remove('visible'); });
@@ -496,4 +557,187 @@ function updateRightSidebarUI() {
     document.getElementById('img-filename').textContent = image.name || '-';
     document.getElementById('img-dimensions').textContent = `${image.width}×${image.height}`;
   }
+}
+
+// ====== 智能分类 ======
+function initClassification() {
+  const enabledCb = document.getElementById('classify-enabled');
+  const modeSelect = document.getElementById('classify-mode');
+  const classifyBtn = document.getElementById('btn-classify');
+  const sortBtn = document.getElementById('btn-sort-by-class');
+  const controls = document.getElementById('classify-controls');
+
+  if (!enabledCb) return;
+
+  enabledCb.addEventListener('change', () => {
+    setClassificationEnabled(enabledCb.checked);
+    controls.style.display = enabledCb.checked ? '' : 'none';
+    if (enabledCb.checked) runClassification();
+  });
+
+  modeSelect?.addEventListener('change', () => {
+    setClassificationMode(modeSelect.value);
+    if (getState().classification.enabled) runClassification();
+  });
+
+  classifyBtn?.addEventListener('click', () => {
+    clearClassificationCache();
+    runClassification();
+  });
+
+  sortBtn?.addEventListener('click', () => {
+    if (getState().images.length) autoLayout();
+  });
+
+  function runClassification() {
+    const { images } = getState();
+    if (!images.length) return;
+    const results = classifyAllImages(images);
+    setClassificationResults(results);
+    updateClassifySummary();
+  }
+
+  function updateClassifySummary() {
+    const summary = document.getElementById('classify-summary');
+    if (!summary) return;
+    const { classification, images } = getState();
+    if (!classification.enabled || !images.length) {
+      summary.innerHTML = '';
+      return;
+    }
+
+    const counts = {};
+    for (const img of images) {
+      const r = classification.results[img.id];
+      if (r) {
+        const key = r.orientation + (classification.mode !== 'orientation' ? '/' + (r.category || 'general') : '');
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+
+    summary.innerHTML = Object.entries(counts).map(([key, count]) => {
+      const parts = key.split('/');
+      const orientLabel = ORIENTATION_LABELS[parts[0]] || parts[0];
+      const catLabel = parts[1] ? CATEGORY_LABELS[parts[1]] || parts[1] : '';
+      const color = ORIENTATION_COLORS[parts[0]] || '#95a5a6';
+      return `<span class="classify-tag" style="background:${color}">${orientLabel}${catLabel ? '·' + catLabel : ''} ${count}</span>`;
+    }).join('');
+  }
+
+  // 初始同步 UI
+  const initState = getState();
+  if (initState.classification.enabled) {
+    enabledCb.checked = true;
+    controls.style.display = '';
+    updateClassifySummary();
+  }
+}
+
+// ====== 网格列数 ======
+function initGridColumns() {
+  const group = document.getElementById('grid-columns-group');
+  const btn2 = document.getElementById('grid-cols-2');
+  const btn3 = document.getElementById('grid-cols-3');
+
+  if (!btn2 || !btn3) return;
+
+  btn2.addEventListener('click', () => {
+    setGridColumns(2);
+    btn2.classList.add('active');
+    btn3.classList.remove('active');
+    if (getState().images.length) autoLayout();
+  });
+
+  btn3.addEventListener('click', () => {
+    setGridColumns(3);
+    btn3.classList.add('active');
+    btn2.classList.remove('active');
+    if (getState().images.length) autoLayout();
+  });
+
+  // 模板切换时显示/隐藏
+  subscribe(() => {
+    const { template } = getState();
+    group.style.display = template === 'grid' ? '' : 'none';
+  });
+}
+
+// ====== 应用到所有页 ======
+function initApplyAllBackgrounds() {
+  const btn = document.getElementById('bg-apply-all');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const type = document.getElementById('bg-type')?.value || 'none';
+    if (type === 'none') {
+      setAllPageBackgrounds({ type: 'none' });
+      showToast('已清除所有页面背景');
+      return;
+    }
+
+    const bg = { type };
+    if (type === 'solid') {
+      bg.color = document.getElementById('bg-color')?.value || '#ffffff';
+    } else if (type === 'gradient') {
+      bg.color = document.getElementById('bg-color')?.value || '#667eea';
+      bg.color2 = document.getElementById('bg-color2')?.value || '#764ba2';
+      bg.angle = parseInt(document.getElementById('bg-angle')?.value || '135');
+    } else if (type === 'texture') {
+      bg.texture = document.getElementById('bg-texture')?.value || 'dots';
+    }
+
+    setAllPageBackgrounds(bg);
+    showToast('背景已应用到所有页面');
+  });
+}
+
+// ====== 输入对话框 ======
+function showInputDialog(title, defaultValue, callback) {
+  const overlay = document.createElement('div');
+  overlay.className = 'dialog-overlay visible';
+
+  const dialog = document.createElement('div');
+  dialog.className = 'dialog';
+
+  dialog.innerHTML = `
+    <div class="dialog-header">
+      <h3>${title}</h3>
+      <button class="dialog-close">×</button>
+    </div>
+    <div class="dialog-body">
+      <input type="text" class="text-input" value="${defaultValue || ''}" style="width:100%">
+    </div>
+    <div class="dialog-footer">
+      <button class="btn-secondary cancel-btn">取消</button>
+      <button class="btn-primary confirm-btn">确定</button>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  const input = dialog.querySelector('input');
+  input.focus();
+  input.select();
+
+  const close = () => overlay.remove();
+
+  dialog.querySelector('.dialog-close').addEventListener('click', close);
+  dialog.querySelector('.cancel-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  dialog.querySelector('.confirm-btn').addEventListener('click', () => {
+    const value = input.value.trim();
+    close();
+    if (value) callback(value);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const value = input.value.trim();
+      close();
+      if (value) callback(value);
+    }
+    if (e.key === 'Escape') close();
+  });
 }

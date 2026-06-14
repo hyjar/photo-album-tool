@@ -29,7 +29,7 @@ function layoutGrid(images, pageW, pageH) {
   if (!images.length) return [];
   const pages = [];
   const p = pad(), g = gap();
-  const cols = 2;
+  const cols = getState().gridColumns || 2;
   const usableW = pageW - p * 2;
   const cellW = (usableW - g * (cols - 1)) / cols;
 
@@ -321,24 +321,57 @@ export function createFreeCanvasPage() {
 
 // ====== 主排版函数 ======
 export function autoLayout() {
-  const { images, template, autoOrient } = getState();
+  const { images, template, autoOrient, classification } = getState();
   if (!images.length) return;
   const { w: pageW, h: pageH } = getPageMmSize();
+
+  // 分类排序：同方向同类型图片集中排列
+  let sortedImages = images;
+  if (classification.enabled && Object.keys(classification.results).length > 0) {
+    sortedImages = sortImagesByClassification(images, classification);
+  }
+
   let pages;
 
   switch (template) {
-    case 'single': pages = layoutSingle(images, pageW, pageH, autoOrient); break;
-    case 'collage': pages = layoutCollage(images, pageW, pageH); break;
-    case 'timeline': pages = layoutTimeline(images, pageW, pageH); break;
-    case 'crosspage': pages = layoutCrossPage(images, pageW, pageH); break;
-    case 'portfolio': pages = layoutPortfolio(images, pageW, pageH, autoOrient); break;
-    case 'grid': default: pages = layoutGrid(images, pageW, pageH); break;
+    case 'single': pages = layoutSingle(sortedImages, pageW, pageH, autoOrient); break;
+    case 'collage': pages = layoutCollage(sortedImages, pageW, pageH); break;
+    case 'timeline': pages = layoutTimeline(sortedImages, pageW, pageH); break;
+    case 'crosspage': pages = layoutCrossPage(sortedImages, pageW, pageH); break;
+    case 'portfolio': pages = layoutPortfolio(sortedImages, pageW, pageH, autoOrient); break;
+    case 'grid': default: pages = layoutGrid(sortedImages, pageW, pageH); break;
   }
 
   // 为每页添加默认背景
   pages.forEach(p => { if (!p.background) p.background = { type: 'none' }; });
   setPages(pages);
   return pages;
+}
+
+// 分类排序函数
+function sortImagesByClassification(images, classification) {
+  const { results, manualOverrides, mode } = classification;
+  const orientationOrder = { portrait: 0, landscape: 1, square: 2 };
+  const categoryOrder = { portrait: 0, landscape: 1, architecture: 2, macro: 3, animal: 4, food: 5, general: 6 };
+
+  return [...images].sort((a, b) => {
+    const ca = manualOverrides[a.id] ? { ...results[a.id], category: manualOverrides[a.id] } : results[a.id] || {};
+    const cb = manualOverrides[b.id] ? { ...results[b.id], category: manualOverrides[b.id] } : results[b.id] || {};
+
+    if (mode === 'orientation' || mode === 'both') {
+      const oa = orientationOrder[ca.orientation] ?? 3;
+      const ob = orientationOrder[cb.orientation] ?? 3;
+      if (oa !== ob) return oa - ob;
+    }
+
+    if (mode === 'category' || mode === 'both') {
+      const catA = categoryOrder[ca.category] ?? 7;
+      const catB = categoryOrder[cb.category] ?? 7;
+      if (catA !== catB) return catA - catB;
+    }
+
+    return 0;
+  });
 }
 
 // ====== 文字页面 ======

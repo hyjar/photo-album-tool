@@ -102,10 +102,20 @@ function renderPageNumber(pageEl, pageIdx, totalPages) {
 function renderHeaderFooter(pageEl) {
   const s = getState();
   if (s.headerText) {
-    pageEl.appendChild(el('div', { class: 'page-header', textContent: s.headerText }));
+    const headerStyle = s.headerStyle || {};
+    const header = el('div', { class: 'page-header', textContent: s.headerText });
+    if (headerStyle.fontSize) header.style.fontSize = headerStyle.fontSize + 'px';
+    if (headerStyle.color) header.style.color = headerStyle.color;
+    if (headerStyle.fontFamily) header.style.fontFamily = headerStyle.fontFamily;
+    pageEl.appendChild(header);
   }
   if (s.footerText) {
-    pageEl.appendChild(el('div', { class: 'page-footer', textContent: s.footerText }));
+    const footerStyle = s.footerStyle || {};
+    const footer = el('div', { class: 'page-footer', textContent: s.footerText });
+    if (footerStyle.fontSize) footer.style.fontSize = footerStyle.fontSize + 'px';
+    if (footerStyle.color) footer.style.color = footerStyle.color;
+    if (footerStyle.fontFamily) footer.style.fontFamily = footerStyle.fontFamily;
+    pageEl.appendChild(footer);
   }
 }
 
@@ -227,6 +237,8 @@ function renderImageElement(elem, page, isSelected, scale) {
 
 function renderTextElement(elem, page, isSelected, scale) {
   const s = elem.style || {};
+  const textAlign = s.textAlign || 'center';
+  const justifyContent = textAlign === 'left' ? 'flex-start' : textAlign === 'right' ? 'flex-end' : 'center';
   const children = [
     el('div', {
       style: {
@@ -235,13 +247,15 @@ function renderTextElement(elem, page, isSelected, scale) {
         fontStyle: s.italic ? 'italic' : 'normal',
         textDecoration: s.underline ? 'underline' : 'none',
         color: s.color || '#ffffff',
+        fontFamily: s.fontFamily || 'system-ui',
+        lineHeight: s.lineHeight || 1.4,
         textShadow: s.stroke ? `1px 1px 2px ${s.strokeColor || '#000'}, -1px -1px 2px ${s.strokeColor || '#000'}` : 'none',
         width: '100%',
         height: '100%',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
+        justifyContent: justifyContent,
+        textAlign: textAlign,
         overflow: 'hidden',
         wordBreak: 'break-word',
       },
