@@ -9,8 +9,8 @@ const state = {
   pages: [],         // { id, elements, isTextPage, isFreeCanvas, text, textStyle, background, pageNumber }
   selectedPageId: null,
   selectedElementId: null,
-  template: 'grid',
-  fitMode: 'cover',  // 'cover' | 'contain' — 单页大图模式
+  template: 'single',
+  fitMode: 'contain',  // 'cover' | 'contain' — 单页大图模式
   pageSize: { width: A4_WIDTH_MM, height: A4_HEIGHT_MM },
   orientation: 'portrait',
   theme: {

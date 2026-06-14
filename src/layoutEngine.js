@@ -62,15 +62,21 @@ function layoutGrid(images, pageW, pageH) {
   return pages;
 }
 
-// ====== 单页大图（支持 cover/contain） ======
-function layoutSingle(images, pageW, pageH) {
+// ====== 单页大图（支持 cover/contain + 自适应方向） ======
+function layoutSingle(images, pageW, pageH, autoOrient) {
   const { fitMode } = getState();
   const pages = [];
   const p = pad();
-  const usableW = pageW - p * 2;
-  const usableH = pageH - p * 2;
 
   for (const img of images) {
+    // 自适应方向：横图横放
+    let pw = pageW, ph = pageH;
+    if (autoOrient && img.naturalW && img.naturalH && img.naturalW > img.naturalH) {
+      pw = pageH; ph = pageW;
+    }
+    const usableW = pw - p * 2;
+    const usableH = ph - p * 2;
+
     let w, h, x, y;
     if (fitMode === 'contain') {
       // 完整显示，留白边距
@@ -84,24 +90,22 @@ function layoutSingle(images, pageW, pageH) {
       x = p + (usableW - w) / 2;
       y = p + (usableH - h) / 2;
     } else {
-      // cover — 裁剪填满（选择能完全覆盖页面的最小方案）
-      const byWidth_h = pageW / img.aspectRatio;  // 以宽度为基准时的高度
-      const byHeight_w = pageH * img.aspectRatio;  // 以高度为基准时的宽度
+      // cover — 裁剪填满
+      const byWidth_h = pw / img.aspectRatio;
+      const byHeight_w = ph * img.aspectRatio;
 
-      if (byWidth_h >= pageH) {
-        // 以宽度为基准能覆盖高度 → 用宽度基准（更小）
-        w = pageW;
-        h = byWidth_h;
+      if (byWidth_h >= ph) {
+        w = pw; h = byWidth_h;
       } else {
-        // 必须以高度为基准才能覆盖宽度
-        h = pageH;
-        w = byHeight_w;
+        h = ph; w = byHeight_w;
       }
-      x = (pageW - w) / 2;
-      y = (pageH - h) / 2;
+      x = (pw - w) / 2;
+      y = (ph - h) / 2;
     }
     pages.push({
       id: uid(),
+      width: pw,
+      height: ph,
       elements: [{ id: uid(), imageId: img.id, x, y, w, h }],
       background: null,
     });
@@ -323,7 +327,7 @@ export function autoLayout() {
   let pages;
 
   switch (template) {
-    case 'single': pages = layoutSingle(images, pageW, pageH); break;
+    case 'single': pages = layoutSingle(images, pageW, pageH, autoOrient); break;
     case 'collage': pages = layoutCollage(images, pageW, pageH); break;
     case 'timeline': pages = layoutTimeline(images, pageW, pageH); break;
     case 'crosspage': pages = layoutCrossPage(images, pageW, pageH); break;
