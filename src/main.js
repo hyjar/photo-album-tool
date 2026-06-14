@@ -819,12 +819,12 @@ function initWatermark() {
     controls.style.display = '';
   }
   if (textInput) textInput.value = watermark.text || '© 摄影集';
-  if (fontSizeInput) fontSizeInput.value = watermark.fontSize || 24;
-  if (colorInput) colorInput.value = watermark.color || '#000000';
-  if (opacityInput) opacityInput.value = Math.round((watermark.opacity || 0.15) * 100);
-  if (opacityLabel) opacityLabel.textContent = Math.round((watermark.opacity || 0.15) * 100) + '%';
+  if (fontSizeInput) fontSizeInput.value = watermark.fontSize || 32;
+  if (colorInput) colorInput.value = watermark.color || '#888888';
+  if (opacityInput) opacityInput.value = Math.round((watermark.opacity || 0.3) * 100);
+  if (opacityLabel) opacityLabel.textContent = Math.round((watermark.opacity || 0.3) * 100) + '%';
   if (rotationInput) rotationInput.value = watermark.rotation || -30;
   if (rotationLabel) rotationLabel.textContent = (watermark.rotation || -30) + '°';
-  if (spacingInput) spacingInput.value = watermark.spacing || 200;
+  if (spacingInput) spacingInput.value = watermark.spacing || 150;
   if (fontSelect) fontSelect.value = watermark.fontFamily || 'system-ui';
 }

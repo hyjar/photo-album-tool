@@ -64,12 +64,12 @@ const state = {
   watermark: {
     enabled: false,
     text: '© 摄影集',
-    fontSize: 24,
+    fontSize: 32,
     fontFamily: 'system-ui',
-    color: '#000000',
-    opacity: 0.15,
+    color: '#888888',
+    opacity: 0.3,
     rotation: -30,
-    spacing: 200, // 水印间距 mm
+    spacing: 150, // 水印间距 px
   },
   selectedImageId: null,
   selectedImageProps: {
