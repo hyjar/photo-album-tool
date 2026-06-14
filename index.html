@@ -28,6 +28,7 @@
       <button id="btn-captions" class="tool-btn" title="切换图注显示">图注</button>
       <div class="toolbar-divider"></div>
       <button id="btn-orientation" class="tool-btn" title="切换方向">竖向</button>
+      <button id="btn-auto-orient" class="tool-btn" title="竖图竖放、横图横放，文字同步旋转">↕ 自适应</button>
     </div>
     <div class="toolbar-right">
       <button id="btn-save" class="tool-btn" title="保存项目 (Ctrl+S)">💾</button>
@@ -212,6 +213,125 @@
         </div>
       </div>
     </div>
+
+    <!-- 右侧图片控制面板 -->
+    <aside id="right-sidebar" class="right-sidebar">
+      <div class="section-header">
+        <h3>图片控制</h3>
+        <button id="close-right-sidebar" class="small-btn">✕</button>
+      </div>
+
+      <!-- 图片信息 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>图片信息</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>文件名</span>
+            <span id="img-filename" class="status-badge">-</span>
+          </label>
+          <label class="control-row">
+            <span>尺寸</span>
+            <span id="img-dimensions" class="status-badge">-</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 尺寸控制 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>尺寸</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>宽度</span>
+            <input type="number" id="img-width" min="10" max="2000" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>高度</span>
+            <input type="number" id="img-height" min="10" max="2000" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>锁定比例</span>
+            <button id="img-lock-ratio" class="fit-btn active">🔗</button>
+          </label>
+        </div>
+      </section>
+
+      <!-- 变换控制 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>变换</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>旋转</span>
+            <input type="range" id="img-rotation" min="0" max="360" value="0">
+          </label>
+          <label class="control-row">
+            <span>角度</span>
+            <input type="number" id="img-rotation-input" min="0" max="360" value="0" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>翻转</span>
+            <div class="fit-btns">
+              <button id="img-flip-h" class="fit-btn">↔</button>
+              <button id="img-flip-v" class="fit-btn">↕</button>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <!-- 位置控制 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>位置</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>X</span>
+            <input type="number" id="img-x" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>Y</span>
+            <input type="number" id="img-y" class="text-input">
+          </label>
+          <button id="img-center" class="small-btn">居中</button>
+        </div>
+      </section>
+
+      <!-- 边框控制 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>边框</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>宽度</span>
+            <input type="number" id="img-border-width" min="0" max="20" value="0" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>颜色</span>
+            <input type="color" id="img-border-color" value="#000000">
+          </label>
+          <label class="control-row">
+            <span>圆角</span>
+            <input type="number" id="img-border-radius" min="0" max="100" value="0" class="text-input">
+          </label>
+        </div>
+      </section>
+
+      <!-- 滤镜控制 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>滤镜</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>亮度</span>
+            <input type="range" id="img-brightness" min="0" max="200" value="100">
+          </label>
+          <label class="control-row">
+            <span>对比度</span>
+            <input type="range" id="img-contrast" min="0" max="200" value="100">
+          </label>
+          <label class="control-row">
+            <span>饱和度</span>
+            <input type="range" id="img-saturate" min="0" max="200" value="100">
+          </label>
+          <button id="img-reset-filters" class="small-btn">重置滤镜</button>
+        </div>
+      </section>
+    </aside>
   </main>
 
   <!-- 导出对话框 -->
