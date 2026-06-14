@@ -12,7 +12,7 @@ import {
   setGridColumns, setClassificationEnabled, setClassificationMode,
   setClassificationResults, setAllPageBackgrounds,
   swapElements, toggleElementSelection, clearElementSelection,
-  setHeaderStyle, setFooterStyle,
+  setHeaderStyle, setFooterStyle, setWatermark,
 } from './state.js';
 import { classifyAllImages, clearClassificationCache, CATEGORY_LABELS, ORIENTATION_LABELS, CATEGORY_COLORS, ORIENTATION_COLORS } from './classifier.js';
 import { initImageLoader, renderThumbnailList } from './imageLoader.js';
@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initClassification();
   initGridColumns();
   initApplyAllBackgrounds();
+  initWatermark();
 
   const debouncedUpdate = debounce(() => {
     renderThumbnailList();
@@ -740,4 +741,82 @@ function showInputDialog(title, defaultValue, callback) {
     }
     if (e.key === 'Escape') close();
   });
+}
+
+// ====== 水印设置 ======
+function initWatermark() {
+  const enabledCb = document.getElementById('wm-enabled');
+  const controls = document.getElementById('wm-controls');
+  const textInput = document.getElementById('wm-text');
+  const fontSizeInput = document.getElementById('wm-font-size');
+  const colorInput = document.getElementById('wm-color');
+  const opacityInput = document.getElementById('wm-opacity');
+  const opacityLabel = document.getElementById('wm-opacity-label');
+  const rotationInput = document.getElementById('wm-rotation');
+  const rotationLabel = document.getElementById('wm-rotation-label');
+  const spacingInput = document.getElementById('wm-spacing');
+  const fontSelect = document.getElementById('wm-font');
+
+  if (!enabledCb) return;
+
+  // 启用/禁用
+  enabledCb.addEventListener('change', () => {
+    setWatermark({ enabled: enabledCb.checked });
+    controls.style.display = enabledCb.checked ? '' : 'none';
+  });
+
+  // 文字
+  textInput?.addEventListener('input', () => {
+    setWatermark({ text: textInput.value });
+  });
+
+  // 字号
+  fontSizeInput?.addEventListener('input', () => {
+    setWatermark({ fontSize: parseInt(fontSizeInput.value) });
+  });
+
+  // 颜色
+  colorInput?.addEventListener('input', () => {
+    setWatermark({ color: colorInput.value });
+  });
+
+  // 透明度
+  opacityInput?.addEventListener('input', () => {
+    const val = parseInt(opacityInput.value);
+    opacityLabel.textContent = val + '%';
+    setWatermark({ opacity: val / 100 });
+  });
+
+  // 角度
+  rotationInput?.addEventListener('input', () => {
+    const val = parseInt(rotationInput.value);
+    rotationLabel.textContent = val + '°';
+    setWatermark({ rotation: val });
+  });
+
+  // 间距
+  spacingInput?.addEventListener('input', () => {
+    setWatermark({ spacing: parseInt(spacingInput.value) });
+  });
+
+  // 字体
+  fontSelect?.addEventListener('change', () => {
+    setWatermark({ fontFamily: fontSelect.value });
+  });
+
+  // 初始同步 UI
+  const { watermark } = getState();
+  if (watermark.enabled) {
+    enabledCb.checked = true;
+    controls.style.display = '';
+  }
+  if (textInput) textInput.value = watermark.text || '© 摄影集';
+  if (fontSizeInput) fontSizeInput.value = watermark.fontSize || 24;
+  if (colorInput) colorInput.value = watermark.color || '#000000';
+  if (opacityInput) opacityInput.value = Math.round((watermark.opacity || 0.15) * 100);
+  if (opacityLabel) opacityLabel.textContent = Math.round((watermark.opacity || 0.15) * 100) + '%';
+  if (rotationInput) rotationInput.value = watermark.rotation || -30;
+  if (rotationLabel) rotationLabel.textContent = (watermark.rotation || -30) + '°';
+  if (spacingInput) spacingInput.value = watermark.spacing || 200;
+  if (fontSelect) fontSelect.value = watermark.fontFamily || 'system-ui';
 }

@@ -119,6 +119,59 @@ function renderHeaderFooter(pageEl) {
   }
 }
 
+function renderWatermark(pageEl, scale) {
+  const { watermark } = getState();
+  if (!watermark || !watermark.enabled || !watermark.text) return;
+
+  const container = document.createElement('div');
+  container.className = 'watermark-layer';
+  container.style.cssText = `
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 10;
+  `;
+
+  const fontSize = (watermark.fontSize || 24) * scale;
+  const spacing = (watermark.spacing || 200) * scale * 3.7795; // mm to px
+  const rotation = watermark.rotation || -30;
+  const opacity = watermark.opacity || 0.15;
+  const color = watermark.color || '#000000';
+  const fontFamily = watermark.fontFamily || 'system-ui';
+
+  // 创建重复水印图案
+  const pattern = document.createElement('div');
+  pattern.style.cssText = `
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: ${spacing}px;
+    transform: rotate(${rotation}deg);
+    opacity: ${opacity};
+  `;
+
+  // 计算需要多少水印文本
+  const count = Math.ceil((pageEl.offsetWidth * 3) / spacing) * Math.ceil((pageEl.offsetHeight * 3) / spacing);
+  for (let i = 0; i < Math.min(count, 200); i++) {
+    const span = document.createElement('span');
+    span.textContent = watermark.text;
+    span.style.cssText = `
+      font-size: ${fontSize}px;
+      color: ${color};
+      font-family: ${fontFamily};
+      white-space: nowrap;
+      user-select: none;
+    `;
+    pattern.appendChild(span);
+  }
+
+  container.appendChild(pattern);
+  pageEl.appendChild(container);
+}
+
 function renderImageElement(elem, page, isSelected, scale) {
   const { images } = getState();
   const img = images.find(i => i.id === elem.imageId);
@@ -368,6 +421,9 @@ export function renderPreview() {
 
     // 页码
     renderPageNumber(pageEl, pageIdx, pages.length);
+
+    // 水印
+    renderWatermark(pageEl, scale);
 
     pageEl.addEventListener('click', (e) => {
       if (e.target === pageEl || e.target.classList.contains('page-canvas') || e.target.classList.contains('text-page-content')) {

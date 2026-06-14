@@ -1343,41 +1343,48 @@ body {
   min-width: 0;
 }
 
-/* ============ 内联富文本编辑器 ============ */
-.inline-editor-overlay {
+/* ============ 内联富文本编辑器（浮动式） ============ */
+.inline-editor-float {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   z-index: 9999;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  min-width: 240px;
+  max-width: 400px;
+  animation: fadeInScale 0.15s ease-out;
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .inline-editor-content {
   background: var(--surface);
-  border: 2px solid var(--accent);
-  border-radius: 8px;
-  padding: 12px 16px;
-  min-width: 300px;
-  max-width: 600px;
-  min-height: 40px;
-  max-height: 300px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-height: 36px;
+  max-height: 200px;
   overflow-y: auto;
   outline: none;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text);
 }
 
+.inline-editor-content:focus {
+  border-color: var(--accent);
+}
+
 .inline-editor-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 6px;
+  justify-content: flex-end;
 }
 
 .inline-editor-btn {
@@ -1415,6 +1422,18 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.rich-toolbar-inline {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 6px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 4px;
   flex-wrap: wrap;
 }
 

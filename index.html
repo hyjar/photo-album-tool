@@ -193,6 +193,59 @@
         </div>
       </section>
 
+      <!-- 水印 -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>水印</h3>
+          <label class="classify-toggle">
+            <input type="checkbox" id="wm-enabled">
+            <span>启用</span>
+          </label>
+        </div>
+        <div id="wm-controls" class="theme-controls" style="display:none">
+          <label class="control-row">
+            <span>水印文字</span>
+            <input type="text" id="wm-text" value="© 摄影集" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>字号</span>
+            <input type="range" id="wm-font-size" min="8" max="72" value="24">
+          </label>
+          <label class="control-row">
+            <span>颜色</span>
+            <input type="color" id="wm-color" value="#000000">
+          </label>
+          <label class="control-row">
+            <span>透明度</span>
+            <div class="range-row">
+              <input type="range" id="wm-opacity" min="5" max="50" value="15">
+              <span id="wm-opacity-label">15%</span>
+            </div>
+          </label>
+          <label class="control-row">
+            <span>角度</span>
+            <div class="range-row">
+              <input type="range" id="wm-rotation" min="-90" max="90" value="-30" step="5">
+              <span id="wm-rotation-label">-30°</span>
+            </div>
+          </label>
+          <label class="control-row">
+            <span>间距</span>
+            <input type="range" id="wm-spacing" min="80" max="400" value="200" step="20">
+          </label>
+          <label class="control-row">
+            <span>字体</span>
+            <select id="wm-font">
+              <option value="system-ui">系统默认</option>
+              <option value='"PingFang SC","Microsoft YaHei"'>中文黑体</option>
+              <option value='SimSun,"Songti SC"'>中文宋体</option>
+              <option value="serif">衬线体</option>
+              <option value="sans-serif">无衬线体</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <!-- 页码 -->
       <section class="sidebar-section">
         <div class="section-header"><h3>页码与页眉页脚</h3></div>

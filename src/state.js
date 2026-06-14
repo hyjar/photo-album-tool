@@ -59,6 +59,18 @@ const state = {
   // 新增：页眉页脚样式
   headerStyle: { fontSize: 10, fontFamily: 'system-ui', color: '#888888' },
   footerStyle: { fontSize: 10, fontFamily: 'system-ui', color: '#888888' },
+
+  // 新增：水印设置
+  watermark: {
+    enabled: false,
+    text: '© 摄影集',
+    fontSize: 24,
+    fontFamily: 'system-ui',
+    color: '#000000',
+    opacity: 0.15,
+    rotation: -30,
+    spacing: 200, // 水印间距 mm
+  },
   selectedImageId: null,
   selectedImageProps: {
     width: 100,
@@ -102,6 +114,7 @@ function pushSnapshot() {
     classification: deepClone(state.classification),
     headerStyle: { ...state.headerStyle },
     footerStyle: { ...state.footerStyle },
+    watermark: { ...state.watermark },
   });
   if (history.undoStack.length > history.maxSize) history.undoStack.shift();
   history.redoStack = [];
@@ -126,6 +139,7 @@ function restoreSnapshot(snap) {
   if (snap.classification) state.classification = snap.classification;
   if (snap.headerStyle) Object.assign(state.headerStyle, snap.headerStyle);
   if (snap.footerStyle) Object.assign(state.footerStyle, snap.footerStyle);
+  if (snap.watermark) Object.assign(state.watermark, snap.watermark);
 }
 
 function saveForRedo() {
@@ -327,6 +341,13 @@ export function setAllPageBackgrounds(bg) {
   notify();
 }
 
+// ====== 水印 ======
+export function setWatermark(opts) {
+  pushSnapshot();
+  Object.assign(state.watermark, opts);
+  notify();
+}
+
 // ====== 文字页面 ======
 export function addTextPage(tp) {
   pushSnapshot();
@@ -494,6 +515,7 @@ export function exportState() {
     classification: deepClone(state.classification),
     headerStyle: { ...state.headerStyle },
     footerStyle: { ...state.footerStyle },
+    watermark: { ...state.watermark },
     savedAt: new Date().toISOString(),
   };
 }
@@ -524,6 +546,7 @@ export function importState(saved, imageMap) {
   if (saved.classification) state.classification = saved.classification;
   if (saved.headerStyle) Object.assign(state.headerStyle, saved.headerStyle);
   if (saved.footerStyle) Object.assign(state.footerStyle, saved.footerStyle);
+  if (saved.watermark) Object.assign(state.watermark, saved.watermark);
   notify();
 }
 
