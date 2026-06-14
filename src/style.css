@@ -604,9 +604,14 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 32px;
-  padding-bottom: 40px;
+  padding: 40px 0;
   width: 100%;
   min-height: 100%;
+}
+
+/* 当内容不满一屏时垂直居中 */
+.page-preview:not(:has(.preview-page)) {
+  justify-content: center;
 }
 
 .preview-page {
@@ -1482,6 +1487,65 @@ body {
 /* ============ 导出进度条 ============ */
 .export-progress {
   margin-top: 12px;
+}
+
+.export-progress-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.export-progress-box {
+  background: var(--surface, #fff);
+  border-radius: 16px;
+  padding: 32px 48px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+  min-width: 280px;
+}
+
+.export-progress-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.export-progress-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text, #1D1D1F);
+  margin-bottom: 16px;
+}
+
+.export-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-tertiary, rgba(0,0,0,0.08));
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.export-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--system-blue, #007AFF), #5AC8FA);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.export-progress-text {
+  font-size: 14px;
+  color: var(--text-secondary, #86868B);
 }
 
 .range-row {

@@ -305,9 +305,6 @@ function initExportDialog() {
   const dialog = document.getElementById('export-dialog');
   const qualitySlider = document.getElementById('export-quality');
   const qualityLabel = document.getElementById('export-quality-label');
-  const progressBar = document.getElementById('export-progress');
-  const progressFill = document.getElementById('export-progress-fill');
-  const progressText = document.getElementById('export-progress-text');
 
   // 质量滑块实时更新
   qualitySlider?.addEventListener('input', () => {
@@ -323,29 +320,42 @@ function initExportDialog() {
     const quality = parseInt(qualitySlider?.value || '92') / 100;
     const renderScale = parseInt(document.getElementById('export-scale')?.value || '2');
 
-    // 显示进度条
-    if (progressBar) {
-      progressBar.style.display = '';
-      progressFill.style.width = '0%';
-      progressText.textContent = '导出中...';
-    }
-
     dialog.classList.remove('visible');
-    showToast('正在导出 PDF...');
+
+    // 创建浮动进度条
+    const overlay = document.createElement('div');
+    overlay.className = 'export-progress-overlay';
+    overlay.innerHTML = `
+      <div class="export-progress-box">
+        <div class="export-progress-icon">📄</div>
+        <div class="export-progress-title">正在导出 PDF</div>
+        <div class="export-progress-bar">
+          <div class="export-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="export-progress-text">准备中...</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const fill = overlay.querySelector('.export-progress-fill');
+    const text = overlay.querySelector('.export-progress-text');
+
     try {
       await exportPDF({
         startPage, endPage, fileName, quality, renderScale,
         onProgress: (pct) => {
-          if (progressFill) progressFill.style.width = pct + '%';
-          if (progressText) progressText.textContent = `导出中 ${pct}%`;
+          if (fill) fill.style.width = pct + '%';
+          if (text) text.textContent = `正在渲染第 ${pct} 页...`;
         }
       });
+      text.textContent = '导出完成！';
+      fill.style.width = '100%';
+      setTimeout(() => overlay.remove(), 1200);
       showToast('PDF 导出完成');
     } catch (e) {
       console.error('导出失败:', e);
+      text.textContent = '导出失败';
+      setTimeout(() => overlay.remove(), 2000);
       showToast('导出失败: ' + e.message);
-    } finally {
-      if (progressBar) progressBar.style.display = 'none';
     }
   });
   dialog.addEventListener('click', e => { if (e.target === dialog) dialog.classList.remove('visible'); });

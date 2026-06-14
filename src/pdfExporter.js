@@ -86,12 +86,13 @@ export async function exportPDF(options = {}) {
       scale: renderScale,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: null,
+      backgroundColor: '#ffffff',
       logging: false,
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', quality);
-    pdf.addImage(imgData, 'JPEG', 0, 0, pw, ph);
+    // 使用 PNG 避免 JPEG 黑边（透明区域变黑）
+    const imgData = canvas.toDataURL('image/png');
+    pdf.addImage(imgData, 'PNG', 0, 0, pw, ph);
 
     // 进度回调
     if (onProgress) {
