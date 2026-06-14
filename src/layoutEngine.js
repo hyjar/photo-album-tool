@@ -5,11 +5,18 @@
 import { uid, mmToPx, A4_WIDTH_MM, A4_HEIGHT_MM, clamp } from './utils.js';
 import { getState, setPages } from './state.js';
 
-export function getPagePixelSize() {
+// 返回页面尺寸（毫米）— 布局引擎用
+export function getPageMmSize() {
   const { pageSize, orientation } = getState();
   let w = pageSize.width;
   let h = pageSize.height;
   if (orientation === 'landscape') [w, h] = [h, w];
+  return { w, h };
+}
+
+// 返回页面尺寸（像素）— 预览/编辑器用
+export function getPagePixelSize() {
+  const { w, h } = getPageMmSize();
   return { w: mmToPx(w), h: mmToPx(h) };
 }
 
@@ -77,20 +84,21 @@ function layoutSingle(images, pageW, pageH) {
       x = p + (usableW - w) / 2;
       y = p + (usableH - h) / 2;
     } else {
-      // cover — 裁剪填满（取较大缩放比，确保完全覆盖）
-      const scaleW = usableW / img.aspectRatio; // 以宽度为基准时的高度
-      const scaleH = usableH * img.aspectRatio; // 以高度为基准时的宽度
-      if (scaleW > usableH) {
-        // 宽度基准能覆盖 → 用宽度基准
-        w = usableW;
-        h = scaleW;
+      // cover — 裁剪填满（选择能完全覆盖页面的最小方案）
+      const byWidth_h = pageW / img.aspectRatio;  // 以宽度为基准时的高度
+      const byHeight_w = pageH * img.aspectRatio;  // 以高度为基准时的宽度
+
+      if (byWidth_h >= pageH) {
+        // 以宽度为基准能覆盖高度 → 用宽度基准（更小）
+        w = pageW;
+        h = byWidth_h;
       } else {
-        // 高度基准能覆盖 → 用高度基准
-        h = usableH;
-        w = scaleH;
+        // 必须以高度为基准才能覆盖宽度
+        h = pageH;
+        w = byHeight_w;
       }
-      x = p + (usableW - w) / 2;
-      y = p + (usableH - h) / 2;
+      x = (pageW - w) / 2;
+      y = (pageH - h) / 2;
     }
     pages.push({
       id: uid(),
@@ -259,7 +267,7 @@ export function createFreeCanvasPage() {
 export function autoLayout() {
   const { images, template } = getState();
   if (!images.length) return;
-  const { w: pageW, h: pageH } = getPagePixelSize();
+  const { w: pageW, h: pageH } = getPageMmSize();
   let pages;
 
   switch (template) {

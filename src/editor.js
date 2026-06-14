@@ -1,10 +1,11 @@
 /**
  * 编辑器
  * 支持：拖动、缩放、自由画布、文字叠加编辑、图注编辑
+ * 布局引擎返回像素坐标，编辑器屏幕坐标直接转像素
  */
 import { getState, updateElement, setSelectedElement, setSelectedPage } from './state.js';
 import { getPagePixelSize } from './layoutEngine.js';
-import { clamp, mmToPx } from './utils.js';
+import { clamp } from './utils.js';
 import { renderPreviewThrottled } from './preview.js';
 
 let dragState = null;
@@ -18,15 +19,16 @@ export function initEditor() {
   preview.addEventListener('dblclick', onDblClick);
 }
 
-// 屏幕坐标 → 毫米坐标
-function screenToMm(clientX, clientY) {
+// 屏幕坐标 → 页面像素坐标
+function screenToPage(clientX, clientY) {
   const canvas = document.getElementById('page-canvas');
   if (!canvas) return { x: 0, y: 0 };
   const rect = canvas.getBoundingClientRect();
   const s = getScale();
-  const px = (clientX - rect.left) / s;
-  const py = (clientY - rect.top) / s;
-  return { x: px / 3.7795, y: py / 3.7795 };
+  return {
+    x: (clientX - rect.left) / s,
+    y: (clientY - rect.top) / s,
+  };
 }
 
 function getScale() {
@@ -39,7 +41,7 @@ function getScale() {
 function onMouseDown(e) {
   const canvas = document.getElementById('page-canvas');
   if (!canvas) return;
-  const { x, y } = screenToMm(e.clientX, e.clientY);
+  const { x, y } = screenToPage(e.clientX, e.clientY);
   const { pages, selectedPageId } = getState();
   const page = pages.find(p => p.id === selectedPageId);
   if (!page) return;
@@ -49,7 +51,7 @@ function onMouseDown(e) {
     if (x >= elem.x && x <= elem.x + elem.w && y >= elem.y && y <= elem.y + elem.h) {
       setSelectedElement(elem.id);
       const s = getScale();
-      const resizeThreshold = 20 / s / 3.7795; // 20px → mm
+      const resizeThreshold = 20 / s;
       const isResize = (x > elem.x + elem.w - resizeThreshold) && (y > elem.y + elem.h - resizeThreshold);
       dragState = {
         elementId: elem.id, pageId: selectedPageId,
@@ -66,7 +68,7 @@ function onMouseDown(e) {
 
 function onMouseMove(e) {
   if (!dragState) return;
-  const { x, y } = screenToMm(e.clientX, e.clientY);
+  const { x, y } = screenToPage(e.clientX, e.clientY);
   const dx = x - dragState.startX;
   const dy = y - dragState.startY;
   const { pages } = getState();
@@ -77,8 +79,8 @@ function onMouseMove(e) {
 
   if (dragState.isResize) {
     const { w: pW, h: pH } = getPagePixelSize();
-    elem.w = clamp(dragState.origW + dx, 5, pW / 3.7795);
-    elem.h = clamp(dragState.origH + dy, 5, pH / 3.7795);
+    elem.w = clamp(dragState.origW + dx, 20, pW);
+    elem.h = clamp(dragState.origH + dy, 20, pH);
   } else {
     elem.x = dragState.origX + dx;
     elem.y = dragState.origY + dy;
@@ -103,7 +105,7 @@ function onMouseUp() {
 }
 
 function onDblClick(e) {
-  const { x, y } = screenToMm(e.clientX, e.clientY);
+  const { x, y } = screenToPage(e.clientX, e.clientY);
   const { pages, selectedPageId } = getState();
   const page = pages.find(p => p.id === selectedPageId);
   if (!page) return;
