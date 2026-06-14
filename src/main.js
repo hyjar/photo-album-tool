@@ -154,10 +154,7 @@ function initTemplateSelector() {
       setTemplate(t);
       btns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      // 显示/隐藏裁剪模式选项
-      const fitGroup = document.getElementById('fit-mode-group');
-      if (fitGroup) fitGroup.style.display = t === 'single' ? 'flex' : 'none';
-      // 显示/隐藏网格列数选项
+      // 显示/隐藏网格列数选项（仅网格模式）
       const gridGroup = document.getElementById('grid-columns-group');
       if (gridGroup) gridGroup.style.display = t === 'grid' ? 'flex' : 'none';
       if (getState().images.length > 0) autoLayout();

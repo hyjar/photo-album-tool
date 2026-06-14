@@ -27,38 +27,56 @@ function gap() { return getTheme().spacing; }
 // ====== 网格布局 ======
 function layoutGrid(images, pageW, pageH) {
   if (!images.length) return [];
+  const { fitMode } = getState();
   const pages = [];
   const p = pad(), g = gap();
   const cols = getState().gridColumns || 2;
   const usableW = pageW - p * 2;
   const cellW = (usableW - g * (cols - 1)) / cols;
 
-  // 构建行
-  const rows = [];
-  let row = [], rowH = 0;
-  for (const img of images) {
-    const cellH = cellW / img.aspectRatio;
-    row.push({ ...img, cellH });
-    rowH = Math.max(rowH, cellH);
-    if (row.length === cols) { rows.push({ items: row, height: rowH }); row = []; rowH = 0; }
-  }
-  if (row.length) rows.push({ items: row, height: Math.max(...row.map(i => i.cellH)) });
+  if (fitMode === 'cover') {
+    // cover 模式：固定行高，图片裁剪填满
+    const rowH = cellW * 0.75; // 默认行高为格子宽度的 75%
+    let elems = [], y = p;
+    for (let i = 0; i < images.length; i += cols) {
+      const batch = images.slice(i, i + cols);
+      if (y + rowH > pageH - p && elems.length) {
+        pages.push({ id: uid(), elements: elems, background: null });
+        elems = []; y = p;
+      }
+      batch.forEach((img, idx) => {
+        elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g), y, w: cellW, h: rowH });
+      });
+      y += rowH + g;
+    }
+    if (elems.length) pages.push({ id: uid(), elements: elems, background: null });
+  } else {
+    // contain 模式：自适应行高
+    const rows = [];
+    let row = [], rowH = 0;
+    for (const img of images) {
+      const cellH = cellW / img.aspectRatio;
+      row.push({ ...img, cellH });
+      rowH = Math.max(rowH, cellH);
+      if (row.length === cols) { rows.push({ items: row, height: rowH }); row = []; rowH = 0; }
+    }
+    if (row.length) rows.push({ items: row, height: Math.max(...row.map(i => i.cellH)) });
 
-  // 分页
-  let elems = [], y = p;
-  for (const r of rows) {
-    if (y + r.height > pageH - p && elems.length) {
-      pages.push({ id: uid(), elements: elems, background: null });
-      elems = []; y = p;
+    let elems = [], y = p;
+    for (const r of rows) {
+      if (y + r.height > pageH - p && elems.length) {
+        pages.push({ id: uid(), elements: elems, background: null });
+        elems = []; y = p;
+      }
+      let x = p;
+      for (const item of r.items) {
+        elems.push({ id: uid(), imageId: item.id, x, y, w: r.height * item.aspectRatio, h: r.height });
+        x += r.height * item.aspectRatio + g;
+      }
+      y += r.height + g;
     }
-    let x = p;
-    for (const item of r.items) {
-      elems.push({ id: uid(), imageId: item.id, x, y, w: r.height * item.aspectRatio, h: r.height });
-      x += r.height * item.aspectRatio + g;
-    }
-    y += r.height + g;
+    if (elems.length) pages.push({ id: uid(), elements: elems, background: null });
   }
-  if (elems.length) pages.push({ id: uid(), elements: elems, background: null });
   return pages;
 }
 
@@ -116,6 +134,7 @@ function layoutSingle(images, pageW, pageH, autoOrient) {
 // ====== 拼贴风格 ======
 function layoutCollage(images, pageW, pageH) {
   if (!images.length) return [];
+  const { fitMode } = getState();
   const pages = [];
   const p = pad(), g = gap();
   const usableW = pageW - p * 2;
@@ -129,38 +148,68 @@ function layoutCollage(images, pageW, pageH) {
 
     if (n === 1) {
       const img = batch[0];
-      let w, h;
-      if (img.aspectRatio > usableW / usableH) { w = usableW * 0.8; h = w / img.aspectRatio; }
-      else { h = usableH * 0.8; w = h * img.aspectRatio; }
-      elems.push({ id: uid(), imageId: img.id, x: p + (usableW - w) / 2, y: p + (usableH - h) / 2, w, h });
+      if (fitMode === 'cover') {
+        elems.push({ id: uid(), imageId: img.id, x: p, y: p, w: usableW, h: usableH });
+      } else {
+        let w, h;
+        if (img.aspectRatio > usableW / usableH) { w = usableW * 0.8; h = w / img.aspectRatio; }
+        else { h = usableH * 0.8; w = h * img.aspectRatio; }
+        elems.push({ id: uid(), imageId: img.id, x: p + (usableW - w) / 2, y: p + (usableH - h) / 2, w, h });
+      }
     } else if (n === 2) {
       const cellW = (usableW - g) / 2;
       batch.forEach((img, idx) => {
-        const h = Math.min(cellW / img.aspectRatio, usableH);
-        const w = h * img.aspectRatio;
-        elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g) + (cellW - w) / 2, y: p + (usableH - h) / 2, w, h });
+        if (fitMode === 'cover') {
+          elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g), y: p, w: cellW, h: usableH });
+        } else {
+          const h = Math.min(cellW / img.aspectRatio, usableH);
+          const w = h * img.aspectRatio;
+          elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g) + (cellW - w) / 2, y: p + (usableH - h) / 2, w, h });
+        }
       });
     } else if (n === 3) {
-      const top = batch[0], topH = usableH * 0.55;
-      const topW = Math.min(topH * top.aspectRatio, usableW);
-      elems.push({ id: uid(), imageId: top.id, x: p + (usableW - topW) / 2, y: p, w: topW, h: topH });
+      const topH = usableH * 0.55;
       const bottomY = p + topH + g, bottomH = usableH - topH - g;
       const cellW = (usableW - g) / 2;
-      batch.slice(1).forEach((img, idx) => {
-        const h = Math.min(bottomH, cellW / img.aspectRatio);
-        const w = h * img.aspectRatio;
-        elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g) + (cellW - w) / 2, y: bottomY + (bottomH - h) / 2, w, h });
-      });
+      if (fitMode === 'cover') {
+        elems.push({ id: uid(), imageId: batch[0].id, x: p, y: p, w: usableW, h: topH });
+        batch.slice(1).forEach((img, idx) => {
+          elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g), y: bottomY, w: cellW, h: bottomH });
+        });
+      } else {
+        const top = batch[0];
+        const topW = Math.min(topH * top.aspectRatio, usableW);
+        elems.push({ id: uid(), imageId: top.id, x: p + (usableW - topW) / 2, y: p, w: topW, h: topH });
+        batch.slice(1).forEach((img, idx) => {
+          const h = Math.min(bottomH, cellW / img.aspectRatio);
+          const w = h * img.aspectRatio;
+          elems.push({ id: uid(), imageId: img.id, x: p + idx * (cellW + g) + (cellW - w) / 2, y: bottomY + (bottomH - h) / 2, w, h });
+        });
+      }
     } else {
       const cellW = (usableW - g) / 2;
-      const colY = [p, p];
-      batch.forEach(img => {
-        const c = colY[0] <= colY[1] ? 0 : 1;
-        const h = Math.min(cellW / img.aspectRatio, usableH * 0.5);
-        const w = h * img.aspectRatio;
-        elems.push({ id: uid(), imageId: img.id, x: p + c * (cellW + g) + (cellW - w) / 2, y: colY[c], w, h });
-        colY[c] += h + g;
-      });
+      if (fitMode === 'cover') {
+        const cellH = (usableH - g) / 2;
+        const positions = [
+          { x: p, y: p },
+          { x: p + cellW + g, y: p },
+          { x: p, y: p + cellH + g },
+          { x: p + cellW + g, y: p + cellH + g },
+        ];
+        batch.slice(0, 4).forEach((img, idx) => {
+          const pos = positions[idx];
+          elems.push({ id: uid(), imageId: img.id, x: pos.x, y: pos.y, w: cellW, h: cellH });
+        });
+      } else {
+        const colY = [p, p];
+        batch.forEach(img => {
+          const c = colY[0] <= colY[1] ? 0 : 1;
+          const h = Math.min(cellW / img.aspectRatio, usableH * 0.5);
+          const w = h * img.aspectRatio;
+          elems.push({ id: uid(), imageId: img.id, x: p + c * (cellW + g) + (cellW - w) / 2, y: colY[c], w, h });
+          colY[c] += h + g;
+        });
+      }
     }
     pages.push({ id: uid(), elements: elems, background: null });
   }
@@ -170,6 +219,7 @@ function layoutCollage(images, pageW, pageH) {
 // ====== 时间线 ======
 function layoutTimeline(images, pageW, pageH) {
   if (!images.length) return [];
+  const { fitMode } = getState();
   const pages = [];
   const p = pad(), g = gap();
   const usableW = pageW - p * 2;
@@ -182,14 +232,23 @@ function layoutTimeline(images, pageW, pageH) {
     const cellH = (usableH - g * (batch.length - 1)) / batch.length;
 
     batch.forEach((img, idx) => {
-      const maxW = usableW * 0.7;
-      let w, h;
-      if (img.aspectRatio > maxW / cellH) { w = maxW; h = w / img.aspectRatio; }
-      else { h = cellH; w = h * img.aspectRatio; }
       const isLeft = idx % 2 === 0;
-      const x = isLeft ? p + (usableW * 0.35 - w) / 2 : p + usableW * 0.65 + (usableW * 0.35 - w) / 2;
-      const y = p + idx * (cellH + g) + (cellH - h) / 2;
-      elems.push({ id: uid(), imageId: img.id, x, y, w, h });
+      if (fitMode === 'cover') {
+        // cover：图片填满分配的区域
+        const cellW = usableW * 0.45;
+        const x = isLeft ? p : p + usableW - cellW;
+        const y = p + idx * (cellH + g);
+        elems.push({ id: uid(), imageId: img.id, x, y, w: cellW, h: cellH });
+      } else {
+        // contain：图片适应区域
+        const maxW = usableW * 0.7;
+        let w, h;
+        if (img.aspectRatio > maxW / cellH) { w = maxW; h = w / img.aspectRatio; }
+        else { h = cellH; w = h * img.aspectRatio; }
+        const x = isLeft ? p + (usableW * 0.35 - w) / 2 : p + usableW * 0.65 + (usableW * 0.35 - w) / 2;
+        const y = p + idx * (cellH + g) + (cellH - h) / 2;
+        elems.push({ id: uid(), imageId: img.id, x, y, w, h });
+      }
     });
     pages.push({ id: uid(), elements: elems, background: null });
   }
@@ -199,59 +258,74 @@ function layoutTimeline(images, pageW, pageH) {
 // ====== 跨页大图（2 页拼接） ======
 function layoutCrossPage(images, pageW, pageH) {
   if (!images.length) return [];
+  const { fitMode } = getState();
   const pages = [];
   const p = pad(), g = gap();
+  const usableW = pageW - p * 2;
+  const usableH = pageH - p * 2;
 
   for (let i = 0; i < images.length; i++) {
     const img = images[i];
-    // 每张图占 2 页
-    const spreadW = pageW * 2 + g;
-    const usableH = pageH - p * 2;
-    let w, h;
-    if (img.aspectRatio > spreadW / usableH) {
-      w = spreadW;
-      h = w / img.aspectRatio;
-    } else {
-      h = usableH;
-      w = h * img.aspectRatio;
-    }
 
-    // 左页：图片的左半部分
-    const leftPageW = pageW;
-    const leftImgW = Math.min(w, leftPageW);
-    pages.push({
-      id: uid(),
-      elements: [{
-        id: uid(),
-        imageId: img.id,
-        x: p + (leftPageW - leftImgW) / 2,
-        y: p + (usableH - h) / 2,
-        w: leftImgW,
-        h,
-        crossPage: true,
-        crossPageSide: 'left',
-      }],
-      background: null,
-    });
-
-    // 右页：图片的右半部分
-    const rightPageW = pageW;
-    const rightImgW = Math.min(w - leftImgW + (g * 0), rightPageW);
-    if (w > leftImgW) {
+    if (fitMode === 'cover') {
+      // cover：图片填满两页
       pages.push({
         id: uid(),
         elements: [{
-          id: uid(),
-          imageId: img.id,
-          x: p - (w - leftImgW) / 2,
-          y: p + (usableH - h) / 2,
-          w: Math.min(w - leftImgW + leftImgW * 0.3, rightPageW),
-          h,
-          crossPage: true,
-          crossPageSide: 'right',
+          id: uid(), imageId: img.id,
+          x: p, y: p, w: usableW, h: usableH,
+          crossPage: true, crossPageSide: 'left',
         }],
         background: null,
       });
+      pages.push({
+        id: uid(),
+        elements: [{
+          id: uid(), imageId: img.id,
+          x: p - usableW - g, y: p, w: usableW + g, h: usableH,
+          crossPage: true, crossPageSide: 'right',
+        }],
+        background: null,
+      });
+    } else {
+      // contain：图片适应两页
+      const spreadW = pageW * 2 + g;
+      let w, h;
+      if (img.aspectRatio > spreadW / usableH) {
+        w = spreadW;
+        h = w / img.aspectRatio;
+      } else {
+        h = usableH;
+        w = h * img.aspectRatio;
+      }
+
+      const leftImgW = Math.min(w, pageW);
+      pages.push({
+        id: uid(),
+        elements: [{
+          id: uid(), imageId: img.id,
+          x: p + (pageW - leftImgW) / 2,
+          y: p + (usableH - h) / 2,
+          w: leftImgW, h,
+          crossPage: true, crossPageSide: 'left',
+        }],
+        background: null,
+      });
+
+      if (w > leftImgW) {
+        pages.push({
+          id: uid(),
+          elements: [{
+            id: uid(), imageId: img.id,
+            x: p - (w - leftImgW) / 2,
+            y: p + (usableH - h) / 2,
+            w: Math.min(w - leftImgW + leftImgW * 0.3, pageW),
+            h,
+            crossPage: true, crossPageSide: 'right',
+          }],
+          background: null,
+        });
+      }
     }
   }
   return pages;
@@ -260,6 +334,7 @@ function layoutCrossPage(images, pageW, pageH) {
 // ====== 作品集模式（每页一张居中，下方元数据） ======
 function layoutPortfolio(images, pageW, pageH, autoOrient) {
   if (!images.length) return [];
+  const { fitMode } = getState();
   const pages = [];
   const p = pad();
   const metaAreaH = 20;
@@ -275,16 +350,25 @@ function layoutPortfolio(images, pageW, pageH, autoOrient) {
     const usableW = pw - p * 2;
     const imgAreaH = ph - p * 2 - metaAreaH - gapBelowImg;
 
-    let w, h;
-    if (img.aspectRatio > usableW / imgAreaH) {
+    let w, h, x, y;
+    if (fitMode === 'cover') {
+      // cover：图片填满可用区域
       w = usableW;
-      h = w / img.aspectRatio;
-    } else {
       h = imgAreaH;
-      w = h * img.aspectRatio;
+      x = p;
+      y = p;
+    } else {
+      // contain：图片适应可用区域
+      if (img.aspectRatio > usableW / imgAreaH) {
+        w = usableW;
+        h = w / img.aspectRatio;
+      } else {
+        h = imgAreaH;
+        w = h * img.aspectRatio;
+      }
+      x = p + (usableW - w) / 2;
+      y = p + (imgAreaH - h) / 2;
     }
-    const x = p + (usableW - w) / 2;
-    const y = p + (imgAreaH - h) / 2;
 
     const exif = img.exif || {};
     const camera = exif.camera ? exif.camera + (exif.lens ? ` · ${exif.lens}` : '') : '';
