@@ -6,15 +6,11 @@ import { getState, setSelectedPage, setSelectedElement, updateElement } from './
 import { getPagePixelSize } from './layoutEngine.js';
 import { el, throttle, mmToPx } from './utils.js';
 
-function applyImageProps(element, props) {
+function applyImageProps(element, props, scale) {
   const {
-    width,
-    height,
     rotation,
     flipH,
     flipV,
-    x,
-    y,
     borderWidth,
     borderColor,
     borderRadius,
@@ -23,28 +19,27 @@ function applyImageProps(element, props) {
     saturate,
   } = props;
 
-  element.style.width = `${width}px`;
-  element.style.height = `${height}px`;
+  // Only apply visual transforms — don't override width/height/position
+  // which are already set correctly by renderImageElement
 
   const transforms = [];
   if (flipH) transforms.push('scaleX(-1)');
   if (flipV) transforms.push('scaleY(-1)');
   if (rotation) transforms.push(`rotate(${rotation}deg)`);
-  if (x || y) transforms.push(`translate(${x}px, ${y}px)`);
 
-  element.style.transform = transforms.join(' ') || 'none';
+  element.style.transform = transforms.length ? transforms.join(' ') : '';
 
-  element.style.borderWidth = `${borderWidth}px`;
-  element.style.borderColor = borderColor;
+  element.style.borderWidth = `${borderWidth || 0}px`;
+  element.style.borderColor = borderColor || '#000000';
   element.style.borderStyle = borderWidth ? 'solid' : 'none';
-  element.style.borderRadius = `${borderRadius}px`;
+  element.style.borderRadius = `${borderRadius || 0}px`;
 
   const filters = [];
-  if (brightness !== 100) filters.push(`brightness(${brightness}%)`);
-  if (contrast !== 100) filters.push(`contrast(${contrast}%)`);
-  if (saturate !== 100) filters.push(`saturate(${saturate}%)`);
+  if (brightness && brightness !== 100) filters.push(`brightness(${brightness}%)`);
+  if (contrast && contrast !== 100) filters.push(`contrast(${contrast}%)`);
+  if (saturate && saturate !== 100) filters.push(`saturate(${saturate}%)`);
 
-  element.style.filter = filters.join(' ') || 'none';
+  element.style.filter = filters.length ? filters.join(' ') : '';
 }
 
 let scale = 0.5;
@@ -377,7 +372,7 @@ export function renderPreview() {
     scrollTarget.scrollTop = scrollTop;
   }
 
-  // Apply image properties to preview elements
+  // Apply visual props (rotation, flip, border, filters) to preview elements
   const { selectedImageId, selectedImageProps } = getState();
   pages.forEach(page => {
     page.elements.forEach(elem => {
@@ -385,13 +380,9 @@ export function renderPreview() {
       const element = container.querySelector(`[data-elem-id="${elem.id}"]`);
       if (element) {
         const props = elem.id === selectedImageId ? selectedImageProps : {
-          width: elem.width || 100,
-          height: elem.height || 100,
           rotation: elem.rotation || 0,
           flipH: elem.flipH || false,
           flipV: elem.flipV || false,
-          x: elem.x || 0,
-          y: elem.y || 0,
           borderWidth: elem.borderWidth || 0,
           borderColor: elem.borderColor || '#000000',
           borderRadius: elem.borderRadius || 0,
@@ -399,7 +390,7 @@ export function renderPreview() {
           contrast: elem.contrast || 100,
           saturate: elem.saturate || 100,
         };
-        applyImageProps(element, props);
+        applyImageProps(element, props, scale);
       }
     });
   });

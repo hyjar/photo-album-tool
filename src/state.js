@@ -418,8 +418,8 @@ export function importState(saved, imageMap) {
 export function setSelectedImage(imageId, props) {
   state.selectedImageId = imageId;
   if (props) {
-    state.selectedImageProps = { ...state.selectedImageProps, ...props };
-    state.originalAspectRatio = props.width / props.height;
+    state.selectedImageProps = { ...props };
+    state.originalAspectRatio = (props.width || 1) / (props.height || 1);
   }
   notify();
 }
@@ -431,9 +431,9 @@ export function clearSelectedImage() {
 
 export function updateImageProps(props) {
   if (!state.selectedImageId) return;
-  
+
   const newProps = { ...state.selectedImageProps, ...props };
-  
+
   // Handle lock ratio
   if (state.lockRatio && (props.width || props.height)) {
     if (props.width) {
@@ -442,19 +442,35 @@ export function updateImageProps(props) {
       newProps.width = Math.round(props.height * state.originalAspectRatio);
     }
   }
-  
+
   state.selectedImageProps = newProps;
-  
-  // Update the element in pages
+
+  // Update the element in pages — only apply the props that were explicitly passed,
+  // to avoid overwriting layout engine's w/h with stale selectedImageProps values
   const { pages, selectedPageId } = state;
   const page = pages.find(p => p.id === selectedPageId);
   if (page) {
     const element = page.elements.find(el => el.id === state.selectedImageId);
     if (element) {
-      Object.assign(element, newProps);
+      // Map sidebar props to element props
+      const elemUpdates = {};
+      if ('x' in props) elemUpdates.x = props.x;
+      if ('y' in props) elemUpdates.y = props.y;
+      if ('width' in props) elemUpdates.w = props.width;
+      if ('height' in props) elemUpdates.h = props.height;
+      if ('rotation' in props) elemUpdates.rotation = props.rotation;
+      if ('flipH' in props) elemUpdates.flipH = props.flipH;
+      if ('flipV' in props) elemUpdates.flipV = props.flipV;
+      if ('borderWidth' in props) elemUpdates.borderWidth = props.borderWidth;
+      if ('borderColor' in props) elemUpdates.borderColor = props.borderColor;
+      if ('borderRadius' in props) elemUpdates.borderRadius = props.borderRadius;
+      if ('brightness' in props) elemUpdates.brightness = props.brightness;
+      if ('contrast' in props) elemUpdates.contrast = props.contrast;
+      if ('saturate' in props) elemUpdates.saturate = props.saturate;
+      Object.assign(element, elemUpdates);
     }
   }
-  
+
   notify();
 }
 
