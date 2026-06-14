@@ -636,11 +636,153 @@ body {
 
 /* ============ 响应式 ============ */
 @media (max-width: 768px) {
-  .sidebar {
-    width: 240px;
-  }
+  .sidebar { width: 240px; }
+  .toolbar-center { display: none; }
+}
 
-  .toolbar-center {
-    display: none;
-  }
+/* ============ 裁剪模式 ============ */
+.fit-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.control-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.fit-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.fit-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fit-btn:hover { border-color: var(--accent); }
+
+.fit-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+/* ============ 文本输入框 ============ */
+.text-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+/* ============ 版式预设 ============ */
+.preset-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.preset-select {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+/* ============ 页码 ============ */
+.page-number {
+  position: absolute;
+  font-size: 11px;
+  color: var(--text-muted);
+  z-index: 10;
+}
+
+.page-number-bottom-center {
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.page-number-bottom-left {
+  bottom: 6px;
+  left: 8px;
+}
+
+.page-number-bottom-right {
+  bottom: 6px;
+  right: 8px;
+}
+
+/* ============ 页眉页脚 ============ */
+.page-header {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  z-index: 10;
+}
+
+.page-footer {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  z-index: 10;
+}
+
+/* ============ 文字叠加元素 ============ */
+.preview-text-element {
+  border: 1px dashed rgba(255,255,255,0.4);
+  cursor: move;
+}
+
+.preview-text-element:hover {
+  border-color: rgba(255,255,255,0.8);
+}
+
+/* ============ 图注 ============ */
+.element-caption {
+  position: absolute;
+  bottom: -16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============ 自由画布标识 ============ */
+.page-canvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }

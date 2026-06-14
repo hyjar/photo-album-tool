@@ -22,6 +22,10 @@
       <button id="btn-auto-layout" class="tool-btn primary" title="自动排版">排版</button>
       <button id="btn-add-title" class="tool-btn" title="添加标题页">标题页</button>
       <button id="btn-add-chapter" class="tool-btn" title="添加章节页">章节页</button>
+      <button id="btn-free-canvas" class="tool-btn" title="添加自由画布页">画布</button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-text-overlay" class="tool-btn" title="在选中页面添加文字叠加">文字叠加</button>
+      <button id="btn-captions" class="tool-btn" title="切换图注显示">图注</button>
       <div class="toolbar-divider"></div>
       <button id="btn-orientation" class="tool-btn" title="切换方向">竖向</button>
     </div>
@@ -33,11 +37,11 @@
     </div>
   </header>
 
-  <!-- 主体区域 -->
+  <!-- 主体 -->
   <main class="app-body">
     <!-- 左侧边栏 -->
     <aside class="sidebar">
-      <!-- 图片导入区 -->
+      <!-- 图片导入 -->
       <section class="sidebar-section">
         <div class="section-header">
           <h3>图片素材</h3>
@@ -53,34 +57,37 @@
 
       <!-- 排版模板 -->
       <section class="sidebar-section">
-        <div class="section-header">
-          <h3>排版模板</h3>
-        </div>
+        <div class="section-header"><h3>排版模板</h3></div>
         <div class="template-grid">
           <button class="template-btn active" data-template="grid">
-            <span class="template-icon">▦</span>
-            <span class="template-label">网格</span>
+            <span class="template-icon">▦</span><span class="template-label">网格</span>
           </button>
           <button class="template-btn" data-template="single">
-            <span class="template-icon">▣</span>
-            <span class="template-label">单页大图</span>
+            <span class="template-icon">▣</span><span class="template-label">单页大图</span>
           </button>
           <button class="template-btn" data-template="collage">
-            <span class="template-icon">⊞</span>
-            <span class="template-label">拼贴</span>
+            <span class="template-icon">⊞</span><span class="template-label">拼贴</span>
           </button>
           <button class="template-btn" data-template="timeline">
-            <span class="template-icon">☷</span>
-            <span class="template-label">时间线</span>
+            <span class="template-icon">☷</span><span class="template-label">时间线</span>
           </button>
+          <button class="template-btn" data-template="crosspage">
+            <span class="template-icon">⬌</span><span class="template-label">跨页大图</span>
+          </button>
+        </div>
+        <!-- 裁剪模式（仅单页大图模式显示） -->
+        <div id="fit-mode-group" class="fit-mode-group" style="display:none">
+          <span class="control-label">图片适应</span>
+          <div class="fit-btns">
+            <button id="fit-cover" class="fit-btn active" title="裁剪填满">裁剪填满</button>
+            <button id="fit-contain" class="fit-btn" title="完整显示留白">完整显示</button>
+          </div>
         </div>
       </section>
 
       <!-- 主题设置 -->
       <section class="sidebar-section">
-        <div class="section-header">
-          <h3>主题设置</h3>
-        </div>
+        <div class="section-header"><h3>主题设置</h3></div>
         <div class="theme-controls">
           <label class="control-row">
             <span>背景色</span>
@@ -108,9 +115,88 @@
           </label>
         </div>
       </section>
+
+      <!-- 页面背景 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>页面背景</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>类型</span>
+            <select id="bg-type">
+              <option value="none">无</option>
+              <option value="solid">纯色</option>
+              <option value="gradient">渐变</option>
+              <option value="texture">纹理</option>
+            </select>
+          </label>
+          <div id="bg-solid-opts" class="control-row" style="display:none">
+            <span>颜色</span>
+            <input type="color" id="bg-color" value="#ffffff">
+          </div>
+          <div id="bg-gradient-opts" style="display:none">
+            <label class="control-row"><span>起始色</span><input type="color" id="bg-color" value="#667eea"></label>
+            <label class="control-row"><span>结束色</span><input type="color" id="bg-color2" value="#764ba2"></label>
+            <label class="control-row"><span>角度</span><input type="number" id="bg-angle" value="135" min="0" max="360" step="15"></label>
+          </div>
+          <div id="bg-texture-opts" class="control-row" style="display:none">
+            <span>图案</span>
+            <select id="bg-texture">
+              <option value="dots">点阵</option>
+              <option value="grid">网格</option>
+              <option value="lines">横线</option>
+            </select>
+          </div>
+          <button id="bg-apply" class="small-btn" style="margin-top:6px">应用到当前页</button>
+        </div>
+      </section>
+
+      <!-- 页码 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>页码与页眉页脚</h3></div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>显示页码</span>
+            <input type="checkbox" id="pn-enabled">
+          </label>
+          <label class="control-row">
+            <span>位置</span>
+            <select id="pn-position">
+              <option value="bottom-center">居中</option>
+              <option value="bottom-left">左下</option>
+              <option value="bottom-right">右下</option>
+            </select>
+          </label>
+          <label class="control-row">
+            <span>样式</span>
+            <select id="pn-style">
+              <option value="number">数字</option>
+              <option value="line">带装饰线</option>
+            </select>
+          </label>
+          <label class="control-row">
+            <span>页眉</span>
+            <input type="text" id="header-text" placeholder="输入页眉文字" class="text-input">
+          </label>
+          <label class="control-row">
+            <span>页脚</span>
+            <input type="text" id="footer-text" placeholder="输入页脚文字" class="text-input">
+          </label>
+        </div>
+      </section>
+
+      <!-- 版式预设 -->
+      <section class="sidebar-section">
+        <div class="section-header"><h3>版式预设</h3></div>
+        <div class="preset-row">
+          <select id="preset-select" class="preset-select"><option value="">-- 选择预设 --</option></select>
+          <button id="btn-save-preset" class="small-btn" title="保存当前页为预设">💾</button>
+          <button id="btn-apply-preset" class="small-btn" title="应用预设到当前页">✓</button>
+          <button id="btn-delete-preset" class="small-btn" title="删除预设">🗑</button>
+        </div>
+      </section>
     </aside>
 
-    <!-- 主内容区 - 页面预览 -->
+    <!-- 预览区 -->
     <div class="main-content">
       <div id="page-preview" class="page-preview">
         <div class="empty-preview">
@@ -136,11 +222,6 @@
         <label class="dialog-field">
           <span>结束页码（留空为全部）</span>
           <input type="number" id="export-end" min="1" placeholder="全部">
-        </label>
-        <label class="dialog-field">
-          <span>图片质量 (%)</span>
-          <input type="range" id="export-quality" min="50" max="100" value="92">
-          <span id="quality-value">92%</span>
         </label>
       </div>
       <div class="dialog-footer">

@@ -1,125 +1,246 @@
 /**
- * 页面预览渲染模块
- * 性能优化：增量更新、使用 objectURL、节流渲染
+ * 页面预览渲染
+ * 新增：页面背景、页码、页眉页脚、图注、文字叠加、自由画布
  */
 import { getState, setSelectedPage, setSelectedElement } from './state.js';
 import { getPagePixelSize } from './layoutEngine.js';
-import { el, throttle } from './utils.js';
+import { el, throttle, mmToPx } from './utils.js';
 
 let scale = 0.5;
 let _lastRenderKey = '';
 
-// 生成渲染签名，用于跳过无变化的渲染
 function getRenderKey() {
-  const { pages, images, selectedPageId, selectedElementId, theme } = getState();
+  const s = getState();
   return JSON.stringify({
-    pageCount: pages.length,
-    pageIds: pages.map(p => p.id),
-    elements: pages.map(p => p.elements.map(e => `${e.id}:${Math.round(e.x)},${Math.round(e.y)},${Math.round(e.w)},${Math.round(e.h)}`)),
-    selectedPageId,
-    selectedElementId,
-    bgColor: theme.bgColor,
-    accentColor: theme.accentColor,
-    imgCount: images.length,
+    pc: s.pages.length, pi: s.pages.map(p => p.id),
+    pe: s.pages.map(p => p.elements.map(e => `${e.id}:${Math.round(e.x)},${Math.round(e.y)},${Math.round(e.w)},${Math.round(e.h)}|${e.text || ''}|${e.caption || ''}`)),
+    pb: s.pages.map(p => JSON.stringify(p.background)),
+    sp: s.selectedPageId, se: s.selectedElementId,
+    bg: s.theme.bgColor, ac: s.theme.accentColor,
+    ic: s.images.length,
+    pn: s.pageNumberEnabled, pnp: s.pageNumberPosition, pns: s.pageNumberStyle,
+    ht: s.headerText, ft: s.footerText,
   });
 }
 
-// 渲染所有页面预览
+function renderPageBackground(pageEl, page, scale) {
+  const bg = page.background || { type: 'none' };
+  if (bg.type === 'solid' && bg.color) {
+    pageEl.style.background = bg.color;
+  } else if (bg.type === 'gradient' && bg.color && bg.color2) {
+    const angle = bg.angle || 135;
+    pageEl.style.background = `linear-gradient(${angle}deg, ${bg.color}, ${bg.color2})`;
+  } else if (bg.type === 'texture') {
+    const patterns = {
+      dots: `radial-gradient(circle, #ddd 1px, transparent 1px)`,
+      grid: `linear-gradient(#eee 1px, transparent 1px), linear-gradient(90deg, #eee 1px, transparent 1px)`,
+      lines: `repeating-linear-gradient(0deg, transparent, transparent 10px, #eee 10px, #eee 11px)`,
+    };
+    pageEl.style.backgroundImage = patterns[bg.texture || 'dots'];
+    pageEl.style.backgroundSize = bg.texture === 'grid' ? '20px 20px, 20px 20px' : '20px 20px';
+  } else {
+    pageEl.style.backgroundColor = getState().theme.bgColor;
+  }
+}
+
+function renderPageNumber(pageEl, pageIdx, totalPages) {
+  const s = getState();
+  if (!s.pageNumberEnabled) return;
+  const pos = s.pageNumberPosition;
+  const style = s.pageNumberStyle;
+
+  let text;
+  if (style === 'line') {
+    text = `—— ${pageIdx + 1} / ${totalPages} ——`;
+  } else {
+    text = `${pageIdx + 1}`;
+  }
+
+  const numEl = el('div', {
+    class: `page-number page-number-${pos}`,
+    textContent: text,
+  });
+  pageEl.appendChild(numEl);
+}
+
+function renderHeaderFooter(pageEl) {
+  const s = getState();
+  if (s.headerText) {
+    pageEl.appendChild(el('div', { class: 'page-header', textContent: s.headerText }));
+  }
+  if (s.footerText) {
+    pageEl.appendChild(el('div', { class: 'page-footer', textContent: s.footerText }));
+  }
+}
+
+function renderImageElement(elem, page, isSelected, scale) {
+  const { images } = getState();
+  const img = images.find(i => i.id === elem.imageId);
+  if (!img) return null;
+
+  const children = [
+    el('img', {
+      src: img.previewURL || img.thumbURL || img.objectURL,
+      style: { width: '100%', height: '100%', objectFit: 'cover' },
+    }),
+  ];
+
+  // 图注
+  if (elem.caption !== undefined && elem.caption !== null) {
+    const capStyle = elem.captionStyle || {};
+    children.push(el('div', {
+      class: 'element-caption',
+      style: {
+        fontSize: `${(capStyle.fontSize || 10) * scale}px`,
+        color: capStyle.color || '#666666',
+        position: 'absolute',
+        bottom: `-${16 * scale}px`,
+        left: 0, right: 0,
+        textAlign: 'center',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      },
+      textContent: elem.caption,
+    }));
+  }
+
+  // 选中手柄
+  if (isSelected) {
+    children.push(el('div', { class: 'resize-handle' }));
+  }
+
+  const wrapper = el('div', {
+    class: `preview-element ${isSelected ? 'selected' : ''}`,
+    style: {
+      left: `${mmToPx(elem.x) * scale}px`,
+      top: `${mmToPx(elem.y) * scale}px`,
+      width: `${mmToPx(elem.w) * scale}px`,
+      height: `${mmToPx(elem.h) * scale}px`,
+    },
+  }, children);
+
+  wrapper.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSelectedPage(page.id);
+    setSelectedElement(elem.id);
+  });
+
+  return wrapper;
+}
+
+function renderTextElement(elem, page, isSelected, scale) {
+  const s = elem.style || {};
+  const children = [
+    el('div', {
+      style: {
+        fontSize: `${(s.fontSize || 14) * scale}px`,
+        fontWeight: s.bold ? 'bold' : 'normal',
+        fontStyle: s.italic ? 'italic' : 'normal',
+        textDecoration: s.underline ? 'underline' : 'none',
+        color: s.color || '#ffffff',
+        textShadow: s.stroke ? `1px 1px 2px ${s.strokeColor || '#000'}, -1px -1px 2px ${s.strokeColor || '#000'}` : 'none',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        overflow: 'hidden',
+        wordBreak: 'break-word',
+      },
+      textContent: elem.text || '',
+    }),
+  ];
+
+  if (isSelected) children.push(el('div', { class: 'resize-handle' }));
+
+  const wrapper = el('div', {
+    class: `preview-element preview-text-element ${isSelected ? 'selected' : ''}`,
+    style: {
+      left: `${mmToPx(elem.x) * scale}px`,
+      top: `${mmToPx(elem.y) * scale}px`,
+      width: `${mmToPx(elem.w) * scale}px`,
+      height: `${mmToPx(elem.h) * scale}px`,
+    },
+  }, children);
+
+  wrapper.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSelectedPage(page.id);
+    setSelectedElement(elem.id);
+  });
+
+  return wrapper;
+}
+
 export function renderPreview() {
   const container = document.getElementById('page-preview');
   if (!container) return;
 
   const renderKey = getRenderKey();
-  if (renderKey === _lastRenderKey) return; // 无变化，跳过
+  if (renderKey === _lastRenderKey) return;
   _lastRenderKey = renderKey;
 
-  const { pages, images, selectedPageId, selectedElementId, theme } = getState();
+  const { pages, selectedPageId, selectedElementId } = getState();
   container.innerHTML = '';
 
-  if (pages.length === 0) {
-    container.innerHTML = `
-      <div class="empty-preview">
-        <div class="empty-icon">📷</div>
-        <p>导入图片并点击"自动排版"开始</p>
-      </div>`;
+  if (!pages.length) {
+    container.innerHTML = '<div class="empty-preview"><div class="empty-icon">📷</div><p>导入图片并点击"排版"开始</p></div>';
     return;
   }
 
   const { w: pageW, h: pageH } = getPagePixelSize();
-  const maxWidth = container.clientWidth || container.parentElement.clientWidth || 600;
-  scale = Math.min((maxWidth - 60) / pageW, 0.7);
-  scale = Math.max(scale, 0.05); // 保证最小缩放
+  const maxW = container.clientWidth || container.parentElement.clientWidth || 600;
+  scale = Math.min((maxW - 60) / pageW, 0.7);
+  scale = Math.max(scale, 0.05);
 
   const fragment = document.createDocumentFragment();
 
   pages.forEach((page, pageIdx) => {
     const pageEl = el('div', {
       class: `preview-page ${page.id === selectedPageId ? 'selected' : ''}`,
-      style: {
-        width: `${pageW * scale}px`,
-        height: `${pageH * scale}px`,
-        backgroundColor: theme.bgColor,
-      },
-    }, [
-      el('div', { class: 'page-number', textContent: `第 ${pageIdx + 1} 页` }),
-    ]);
+      style: { width: `${pageW * scale}px`, height: `${pageH * scale}px` },
+    });
+
+    // 页面背景
+    renderPageBackground(pageEl, page, scale);
+
+    // 页眉页脚
+    renderHeaderFooter(pageEl);
+
+    if (page.isTextPage) {
+      const style = page.textStyle || {};
+      pageEl.appendChild(el('div', {
+        class: 'text-page-content',
+        style: {
+          fontSize: `${(style.fontSize || 48) * scale}px`,
+          fontWeight: style.fontWeight || 'bold',
+          textAlign: style.textAlign || 'center',
+          color: style.color || getState().theme.accentColor,
+        },
+        textContent: page.text,
+      }));
+    } else {
+      // 图片或自由画布
+      const canvas = el('div', { class: 'page-canvas' });
+      page.elements.forEach(elem => {
+        const el_ = elem.type === 'text'
+          ? renderTextElement(elem, page, elem.id === selectedElementId && page.id === selectedPageId, scale)
+          : renderImageElement(elem, page, elem.id === selectedElementId && page.id === selectedPageId, scale);
+        if (el_) canvas.appendChild(el_);
+      });
+      pageEl.appendChild(canvas);
+    }
+
+    // 页码
+    renderPageNumber(pageEl, pageIdx, pages.length);
 
     pageEl.addEventListener('click', (e) => {
-      if (e.target === pageEl || e.target.classList.contains('page-canvas')) {
+      if (e.target === pageEl || e.target.classList.contains('page-canvas') || e.target.classList.contains('text-page-content')) {
         setSelectedPage(page.id);
       }
     });
-
-    if (page.isTextPage) {
-      const textOverlay = el('div', {
-        class: 'text-page-content',
-        style: {
-          fontSize: `${(page.textStyle?.fontSize || 48) * scale}px`,
-          fontWeight: page.textStyle?.fontWeight || 'bold',
-          textAlign: page.textStyle?.textAlign || 'center',
-          color: page.textStyle?.color || theme.accentColor,
-        },
-        textContent: page.text,
-      });
-      pageEl.appendChild(textOverlay);
-    } else {
-      const canvas = el('div', {
-        class: 'page-canvas',
-        id: page.id === selectedPageId ? 'page-canvas' : undefined,
-      });
-
-      page.elements.forEach(elem => {
-        const img = images.find(i => i.id === elem.imageId);
-        if (!img) return;
-
-        const isSelected = elem.id === selectedElementId && page.id === selectedPageId;
-        const imgEl = el('div', {
-          class: `preview-element ${isSelected ? 'selected' : ''}`,
-          style: {
-            left: `${elem.x * scale}px`,
-            top: `${elem.y * scale}px`,
-            width: `${elem.w * scale}px`,
-            height: `${elem.h * scale}px`,
-          },
-        }, [
-          el('img', {
-            src: img.previewURL || img.thumbURL || img.objectURL,
-            style: { width: '100%', height: '100%', objectFit: 'cover' },
-          }),
-          ...(isSelected ? [el('div', { class: 'resize-handle' })] : []),
-        ]);
-
-        imgEl.addEventListener('click', (e) => {
-          e.stopPropagation();
-          setSelectedPage(page.id);
-          setSelectedElement(elem.id);
-        });
-
-        canvas.appendChild(imgEl);
-      });
-
-      pageEl.appendChild(canvas);
-    }
 
     fragment.appendChild(pageEl);
   });
@@ -127,21 +248,7 @@ export function renderPreview() {
   container.appendChild(fragment);
 }
 
-// 节流版本的渲染（用于频繁调用的场景）
 export const renderPreviewThrottled = throttle(renderPreview, 50);
-
-// 强制重新渲染（忽略缓存）
-export function forceRenderPreview() {
-  _lastRenderKey = '';
-  renderPreview();
-}
-
-export function setPreviewScale(s) {
-  scale = s;
-  _lastRenderKey = '';
-  renderPreview();
-}
-
-export function getPreviewScale() {
-  return scale;
-}
+export function forceRenderPreview() { _lastRenderKey = ''; renderPreview(); }
+export function setPreviewScale(s) { scale = s; _lastRenderKey = ''; renderPreview(); }
+export function getPreviewScale() { return scale; }
