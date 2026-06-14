@@ -33,6 +33,11 @@
         <button id="btn-canvas-orient-on" class="tool-btn small active" title="画布也跟着旋转">画布自适应</button>
         <button id="btn-canvas-orient-off" class="tool-btn small" title="画布方向固定">画布固定</button>
       </div>
+      <div class="toolbar-divider"></div>
+      <div class="page-slider-group" id="page-slider-group" style="display:none">
+        <span class="slider-label" id="slider-page-label">1/1</span>
+        <input type="range" id="page-slider" class="page-slider" min="1" max="1" value="1">
+      </div>
     </div>
     <div class="toolbar-right">
       <button id="btn-save" class="tool-btn" title="保存项目 (Ctrl+S)">💾</button>
@@ -494,6 +499,10 @@
     </div>
   </div>
 
+  <div id="slider-preview" class="slider-preview" style="display:none">
+    <div class="slider-preview-thumb" id="slider-preview-thumb"></div>
+    <div class="slider-preview-label" id="slider-preview-label">第 1 页</div>
+  </div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

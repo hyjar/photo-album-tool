@@ -7,7 +7,7 @@ import {
   setTemplate, setFitMode, toggleDarkMode, setOrientation, setPageSize, setTheme,
   setPageNumber, setHeaderFooter, setPageBackground,
   addTextOverlay, toggleCaptions,
-  savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient, setCanvasAutoOrient,
+  savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient, setCanvasAutoOrient, setSelectedPage,
   updateImageProps, setLockRatio, resetImageFilters, updateElement,
   setGridColumns, setClassificationEnabled, setClassificationMode,
   setClassificationResults, setAllPageBackgrounds,
@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initGridColumns();
   initApplyAllBackgrounds();
   initWatermark();
+  initPageSlider();
 
   const debouncedUpdate = debounce(() => {
     renderThumbnailList();
@@ -849,4 +850,109 @@ function initWatermark() {
   if (rotationLabel) rotationLabel.textContent = (watermark.rotation || -30) + '°';
   if (spacingInput) spacingInput.value = watermark.spacing || 150;
   if (fontSelect) fontSelect.value = watermark.fontFamily || 'system-ui';
+}
+
+/* ========================
+   页码滑块 + 浮动缩略图
+   ======================== */
+let _sliderPreviewTimer = null;
+let _sliderCanvasCache = {};
+
+function initPageSlider() {
+  const group = document.getElementById('page-slider-group');
+  const slider = document.getElementById('page-slider');
+  const label = document.getElementById('slider-page-label');
+  const previewEl = document.getElementById('slider-preview');
+  const previewThumb = document.getElementById('slider-preview-thumb');
+  const previewLabel = document.getElementById('slider-preview-label');
+  if (!slider || !group) return;
+
+  // 监听状态变化，更新滑块范围
+  subscribe(() => {
+    const { pages, selectedPageId } = getState();
+    const count = pages.length;
+    if (count <= 1) {
+      group.style.display = 'none';
+      return;
+    }
+    group.style.display = '';
+    slider.max = count;
+    slider.value = Math.max(1, pages.findIndex(p => p.id === selectedPageId) + 1);
+    label.textContent = `${slider.value}/${count}`;
+  });
+
+  // 拖动时显示浮动缩略图
+  slider.addEventListener('input', () => {
+    const { pages } = getState();
+    const idx = parseInt(slider.value) - 1;
+    if (idx < 0 || idx >= pages.length) return;
+    label.textContent = `${idx + 1}/${pages.length}`;
+
+    // 定位预览框在滑块上方
+    const rect = slider.getBoundingClientRect();
+    const ratio = (slider.value - slider.min) / (slider.max - slider.min);
+    const x = rect.left + ratio * rect.width;
+    const y = rect.top - 10;
+    previewEl.style.display = 'flex';
+    previewEl.style.left = `${x}px`;
+    previewEl.style.top = `${y}px`;
+    previewEl.style.transform = 'translate(-50%, -100%)';
+
+    // 生成缩略图
+    previewLabel.textContent = `第 ${idx + 1} 页`;
+    updateSliderPreview(idx);
+  });
+
+  // 释放时跳转到对应页面
+  slider.addEventListener('change', () => {
+    const { pages } = getState();
+    const idx = parseInt(slider.value) - 1;
+    if (idx >= 0 && idx < pages.length) {
+      setSelectedPage(pages[idx].id);
+      // 滚动到目标页面
+      const pageEls = document.querySelectorAll('.preview-page');
+      if (pageEls[idx]) {
+        pageEls[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    previewEl.style.display = 'none';
+    _sliderCanvasCache = {};
+  });
+
+  // 鼠标离开滑块时隐藏预览
+  slider.addEventListener('mouseup', () => { previewEl.style.display = 'none'; });
+  slider.addEventListener('mouseleave', () => { previewEl.style.display = 'none'; });
+}
+
+async function updateSliderPreview(pageIdx) {
+  const previewThumb = document.getElementById('slider-preview-thumb');
+  if (!previewThumb) return;
+
+  // 清空旧内容
+  previewThumb.innerHTML = '<div style="font-size:12px;color:#999">加载中...</div>';
+
+  // 找到对应的预览页 DOM
+  const pageEls = document.querySelectorAll('.preview-page');
+  const targetEl = pageEls[pageIdx];
+  if (!targetEl) {
+    previewThumb.innerHTML = '<div style="font-size:12px;color:#999">无预览</div>';
+    return;
+  }
+
+  try {
+    const html2canvas = (await import('html2canvas')).default;
+    const canvas = await html2canvas(targetEl, {
+      scale: 0.5,
+      backgroundColor: '#ffffff',
+      logging: false,
+      useCORS: true,
+    });
+    previewThumb.innerHTML = '';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.objectFit = 'contain';
+    previewThumb.appendChild(canvas);
+  } catch (e) {
+    previewThumb.innerHTML = '<div style="font-size:12px;color:#999">预览失败</div>';
+  }
 }
