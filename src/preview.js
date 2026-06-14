@@ -56,6 +56,7 @@ function getRenderKey() {
     ic: s.images.length,
     pn: s.pageNumberEnabled, pnp: s.pageNumberPosition, pns: s.pageNumberStyle,
     ht: s.headerText, ft: s.footerText,
+    wm: JSON.stringify(s.watermark),
   });
 }
 
