@@ -166,6 +166,39 @@ export async function exportPDF(options = {}) {
                 (elem.y + elem.h) * scaleY + 4,
                 { align: 'center' });
             }
+            // 元数据（作品集模式）
+            if (elem.showMeta !== false && img.exif) {
+              const exif = img.exif;
+              const centerX = elem.x * scaleX + (elem.w * scaleX) / 2;
+              let metaY = (elem.y + elem.h) * scaleY + 6;
+              const maxTextW = pageSize.width * 0.85;
+
+              // 第一行：相机型号
+              if (exif.camera) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(30, 30, 30);
+                const cameraText = exif.camera + (exif.lens ? ` · ${exif.lens}` : '');
+                pdf.text(cameraText, centerX, metaY, { align: 'center', maxWidth: maxTextW });
+                metaY += 5;
+              }
+
+              // 第二行：拍摄参数
+              const params = [exif.aperture, exif.shutter, exif.iso, exif.focalLength].filter(Boolean);
+              if (params.length) {
+                pdf.setFontSize(8);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(params.join(' · '), centerX, metaY, { align: 'center' });
+                metaY += 5;
+              }
+
+              // 第三行：描述
+              const desc = elem.description || img.description;
+              if (desc) {
+                pdf.setFontSize(9);
+                pdf.setTextColor(60, 60, 60);
+                pdf.text(desc, centerX, metaY, { align: 'center', maxWidth: maxTextW });
+              }
+            }
           } catch (e) { console.warn('导出失败:', img.name, e); }
         }
       }

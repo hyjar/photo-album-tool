@@ -281,6 +281,30 @@ export function setPageBackground(pageId, bg) {
   notify();
 }
 
+// ====== 图片描述 ======
+export function updateImageDescription(imageId, description) {
+  pushSnapshot();
+  const img = state.images.find(i => i.id === imageId);
+  if (img) img.description = description;
+  // 同步更新所有引用该图片的元素
+  state.pages.forEach(p => {
+    p.elements.forEach(e => {
+      if (e.imageId === imageId) e.description = description;
+    });
+  });
+  notify();
+}
+
+export function updateElementDescription(pageId, elementId, description) {
+  pushSnapshot();
+  const p = state.pages.find(pg => pg.id === pageId);
+  if (p) {
+    const e = p.elements.find(el => el.id === elementId);
+    if (e) e.description = description;
+  }
+  notify();
+}
+
 // ====== 文字叠加 ======
 export function addTextOverlay(pageId) {
   pushSnapshot();

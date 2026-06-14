@@ -5,14 +5,88 @@
  * - 200px 缩略图用于侧边栏
  * - 中等尺寸预览图用于页面排版（避免解码 100MB+ 原图）
  * - 分批处理让出主线程
+ * - EXIF 元数据提取（exifr）
  */
 import { uid, loadImage, el } from './utils.js';
 import { addImages, removeImage, reorderImages, getState } from './state.js';
+import exifr from 'exifr';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
 const THUMB_MAX = 200;    // 缩略图最大边长
 const PREVIEW_MAX = 2000; // 预览图最大边长（用于排版显示）
 const SIZE_WARN_MB = 50;  // 超过此大小显示警告
+
+// 提取并格式化 EXIF 数据
+async function extractExif(file) {
+  try {
+    const raw = await exifr.parse(file, {
+      pick: ['Make', 'Model', 'FNumber', 'ExposureTime', 'ISO', 'FocalLength', 'LensModel', 'DateTimeOriginal'],
+    });
+    if (!raw) return null;
+
+    // 相机名：去重 "NIKON NIKON Z30" → "Nikon Z30"
+    let camera = '';
+    if (raw.Model) {
+      camera = raw.Model;
+      if (raw.Make && !camera.toLowerCase().includes(raw.Make.toLowerCase())) {
+        camera = raw.Make + ' ' + camera;
+      }
+    }
+
+    // 光圈
+    let aperture = '';
+    if (raw.FNumber != null) {
+      aperture = `f/${raw.FNumber}`;
+    }
+
+    // 快门
+    let shutter = '';
+    if (raw.ExposureTime != null) {
+      if (raw.ExposureTime < 1) {
+        shutter = `1/${Math.round(1 / raw.ExposureTime)}s`;
+      } else {
+        shutter = `${raw.ExposureTime}s`;
+      }
+    }
+
+    // ISO
+    let iso = '';
+    if (raw.ISO != null) {
+      iso = `ISO ${raw.ISO}`;
+    }
+
+    // 焦距
+    let focalLength = '';
+    if (raw.FocalLength != null) {
+      focalLength = `${raw.FocalLength}mm`;
+    }
+
+    // 镜头
+    let lens = raw.LensModel || '';
+
+    // 拍摄日期
+    let dateTime = '';
+    if (raw.DateTimeOriginal) {
+      const d = new Date(raw.DateTimeOriginal);
+      if (!isNaN(d)) {
+        dateTime = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+      }
+    }
+
+    const exif = {};
+    if (camera) exif.camera = camera;
+    if (lens) exif.lens = lens;
+    if (aperture) exif.aperture = aperture;
+    if (shutter) exif.shutter = shutter;
+    if (iso) exif.iso = iso;
+    if (focalLength) exif.focalLength = focalLength;
+    if (dateTime) exif.dateTime = dateTime;
+
+    return Object.keys(exif).length > 0 ? exif : null;
+  } catch {
+    return null;
+  }
+}
 
 // 用 createImageBitmap 高效生成缩放版本
 async function createResizedBlob(url, maxSize) {
@@ -58,10 +132,11 @@ async function processFiles(files, onProgress) {
         const objectURL = URL.createObjectURL(file);
         const img = await loadImage(objectURL);
 
-        // 并行生成缩略图和预览图
-        const [thumbURL, previewURL] = await Promise.all([
+        // 并行生成缩略图、预览图、提取 EXIF
+        const [thumbURL, previewURL, exif] = await Promise.all([
           createResizedBlob(objectURL, THUMB_MAX),
           createResizedBlob(objectURL, PREVIEW_MAX),
+          extractExif(file),
         ]);
 
         return {
@@ -74,6 +149,8 @@ async function processFiles(files, onProgress) {
           height: img.naturalHeight,
           aspectRatio: img.naturalWidth / img.naturalHeight,
           size: file.size,
+          exif: exif || undefined,
+          description: '',
         };
       } catch (e) {
         console.warn('无法加载图片:', file.name, e);
@@ -240,11 +317,14 @@ export function renderThumbnailList() {
 
   images.forEach((img, idx) => {
     const sizeMB = (img.size / 1048576).toFixed(1);
+    const metaText = img.exif?.camera
+      ? `${img.exif.camera} · ${img.width}×${img.height}`
+      : `${img.width}×${img.height} (${sizeMB}MB)`;
     const thumb = el('div', { class: 'thumbnail', 'data-id': img.id, draggable: 'true' }, [
       el('img', { src: img.thumbURL, alt: img.name, loading: 'lazy' }),
       el('div', { class: 'thumbnail-info' }, [
         el('span', { class: 'thumbnail-name', textContent: img.name }),
-        el('span', { class: 'thumbnail-size', textContent: `${img.width}×${img.height} (${sizeMB}MB)` }),
+        el('span', { class: 'thumbnail-size', textContent: metaText }),
       ]),
       el('button', {
         class: 'thumbnail-remove',

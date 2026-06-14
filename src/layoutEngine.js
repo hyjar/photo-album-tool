@@ -253,6 +253,43 @@ function layoutCrossPage(images, pageW, pageH) {
   return pages;
 }
 
+// ====== 作品集模式（每页一张居中，下方元数据） ======
+function layoutPortfolio(images, pageW, pageH) {
+  if (!images.length) return [];
+  const pages = [];
+  const p = pad();
+  const usableW = pageW - p * 2;
+  const metaAreaH = 42; // 元数据区域高度 mm
+  const imgAreaH = pageH - p * 2 - metaAreaH - 5; // 图片可用高度（减去间距）
+
+  for (const img of images) {
+    // 计算图片尺寸（contain 模式，居中）
+    let w, h;
+    if (img.aspectRatio > usableW / imgAreaH) {
+      w = usableW;
+      h = w / img.aspectRatio;
+    } else {
+      h = imgAreaH;
+      w = h * img.aspectRatio;
+    }
+    const x = p + (usableW - w) / 2;
+    const y = p + (imgAreaH - h) / 2;
+
+    pages.push({
+      id: uid(),
+      elements: [{
+        id: uid(),
+        imageId: img.id,
+        x, y, w, h,
+        showMeta: true,
+        description: img.description || '',
+      }],
+      background: null,
+    });
+  }
+  return pages;
+}
+
 // ====== 自由画布页面 ======
 export function createFreeCanvasPage() {
   return {
@@ -275,6 +312,7 @@ export function autoLayout() {
     case 'collage': pages = layoutCollage(images, pageW, pageH); break;
     case 'timeline': pages = layoutTimeline(images, pageW, pageH); break;
     case 'crosspage': pages = layoutCrossPage(images, pageW, pageH); break;
+    case 'portfolio': pages = layoutPortfolio(images, pageW, pageH); break;
     case 'grid': default: pages = layoutGrid(images, pageW, pageH); break;
   }
 

@@ -126,6 +126,49 @@ function renderImageElement(elem, page, isSelected, scale) {
     setSelectedElement(elem.id);
   });
 
+  // 元数据块（作品集模式）
+  if (elem.showMeta !== false && img.exif) {
+    const exif = img.exif;
+    const metaLines = [];
+
+    // 第一行：相机型号
+    if (exif.camera) {
+      metaLines.push(el('div', {
+        class: 'meta-camera',
+        style: { fontSize: `${11 * scale}px` },
+        textContent: exif.camera + (exif.lens ? ` · ${exif.lens}` : ''),
+      }));
+    }
+
+    // 第二行：拍摄参数
+    const params = [exif.aperture, exif.shutter, exif.iso, exif.focalLength].filter(Boolean);
+    if (params.length) {
+      metaLines.push(el('div', {
+        class: 'meta-params',
+        style: { fontSize: `${9 * scale}px` },
+        textContent: params.join(' · '),
+      }));
+    }
+
+    // 第三行：描述
+    const desc = elem.description || img.description;
+    if (desc) {
+      metaLines.push(el('div', {
+        class: 'meta-desc',
+        style: { fontSize: `${9 * scale}px` },
+        textContent: desc,
+      }));
+    }
+
+    if (metaLines.length) {
+      const metaBlock = el('div', {
+        class: 'portfolio-meta',
+        style: { top: `${mmToPx(elem.y + elem.h) * scale + 4 * scale}px` },
+      }, metaLines);
+      return [wrapper, metaBlock];
+    }
+  }
+
   return wrapper;
 }
 
@@ -228,7 +271,12 @@ export function renderPreview() {
         const el_ = elem.type === 'text'
           ? renderTextElement(elem, page, elem.id === selectedElementId && page.id === selectedPageId, scale)
           : renderImageElement(elem, page, elem.id === selectedElementId && page.id === selectedPageId, scale);
-        if (el_) canvas.appendChild(el_);
+        if (!el_) return;
+        if (Array.isArray(el_)) {
+          el_.forEach(child => canvas.appendChild(child));
+        } else {
+          canvas.appendChild(el_);
+        }
       });
       pageEl.appendChild(canvas);
     }
