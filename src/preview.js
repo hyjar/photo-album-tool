@@ -78,10 +78,12 @@ function renderImageElement(elem, page, isSelected, scale) {
   const img = images.find(i => i.id === elem.imageId);
   if (!img) return null;
 
+  // portfolio 模式用 contain（不裁剪），其他模式用 cover
+  const useContain = elem.showMeta === true;
   const children = [
     el('img', {
       src: img.previewURL || img.thumbURL || img.objectURL,
-      style: { width: '100%', height: '100%', objectFit: 'cover' },
+      style: { width: '100%', height: '100%', objectFit: useContain ? 'contain' : 'cover' },
     }),
   ];
 
@@ -127,8 +129,8 @@ function renderImageElement(elem, page, isSelected, scale) {
   });
 
   // 元数据块（作品集模式）
-  if (elem.showMeta !== false && img.exif) {
-    const exif = img.exif;
+  if (elem.showMeta === true) {
+    const exif = img.exif || {};
     const metaLines = [];
 
     // 第一行：相机型号
@@ -150,8 +152,8 @@ function renderImageElement(elem, page, isSelected, scale) {
       }));
     }
 
-    // 第三行：描述
-    const desc = elem.description || img.description;
+    // 第三行：描述（从文件名自动生成或用户编辑）
+    const desc = elem.description || img.description || img.name.replace(/\.[^.]+$/, '');
     if (desc) {
       metaLines.push(el('div', {
         class: 'meta-desc',

@@ -167,8 +167,8 @@ export async function exportPDF(options = {}) {
                 { align: 'center' });
             }
             // 元数据（作品集模式）
-            if (elem.showMeta !== false && img.exif) {
-              const exif = img.exif;
+            if (elem.showMeta === true) {
+              const exif = img.exif || {};
               const centerX = elem.x * scaleX + (elem.w * scaleX) / 2;
               let metaY = (elem.y + elem.h) * scaleY + 6;
               const maxTextW = pageSize.width * 0.85;
@@ -191,8 +191,8 @@ export async function exportPDF(options = {}) {
                 metaY += 5;
               }
 
-              // 第三行：描述
-              const desc = elem.description || img.description;
+              // 第三行：描述（从文件名自动生成或用户编辑）
+              const desc = elem.description || img.description || img.name.replace(/\.[^.]+$/, '');
               if (desc) {
                 pdf.setFontSize(9);
                 pdf.setTextColor(60, 60, 60);

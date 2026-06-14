@@ -259,11 +259,12 @@ function layoutPortfolio(images, pageW, pageH) {
   const pages = [];
   const p = pad();
   const usableW = pageW - p * 2;
-  const metaAreaH = 42; // 元数据区域高度 mm
-  const imgAreaH = pageH - p * 2 - metaAreaH - 5; // 图片可用高度（减去间距）
+  const metaAreaH = 20; // 元数据区域高度 mm（3行文字）
+  const gapBelowImg = 4; // 图片与元数据间距
+  const imgAreaH = pageH - p * 2 - metaAreaH - gapBelowImg;
 
   for (const img of images) {
-    // 计算图片尺寸（contain 模式，居中）
+    // 计算图片尺寸（contain 模式，居中于图片区域）
     let w, h;
     if (img.aspectRatio > usableW / imgAreaH) {
       w = usableW;
