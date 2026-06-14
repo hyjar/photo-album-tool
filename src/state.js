@@ -37,6 +37,27 @@ const state = {
   // 新增：页眉页脚
   headerText: '',
   footerText: '',
+
+  // 新增：竖横自适应
+  autoOrient: false,
+  selectedImageId: null,
+  selectedImageProps: {
+    width: 100,
+    height: 100,
+    rotation: 0,
+    flipH: false,
+    flipV: false,
+    x: 0,
+    y: 0,
+    borderWidth: 0,
+    borderColor: '#000000',
+    borderRadius: 0,
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+  },
+  lockRatio: true,
+  originalAspectRatio: 1,
 };
 
 // ====== 快照（只保存布局数据） ======
@@ -57,6 +78,7 @@ function pushSnapshot() {
     pageNumberStyle: state.pageNumberStyle,
     headerText: state.headerText,
     footerText: state.footerText,
+    autoOrient: state.autoOrient,
   });
   if (history.undoStack.length > history.maxSize) history.undoStack.shift();
   history.redoStack = [];
@@ -76,6 +98,7 @@ function restoreSnapshot(snap) {
   state.pageNumberStyle = snap.pageNumberStyle;
   state.headerText = snap.headerText;
   state.footerText = snap.footerText;
+  state.autoOrient = snap.autoOrient || false;
 }
 
 function saveForRedo() {
@@ -93,6 +116,7 @@ function saveForRedo() {
     pageNumberStyle: state.pageNumberStyle,
     headerText: state.headerText,
     footerText: state.footerText,
+    autoOrient: state.autoOrient,
   };
 }
 
@@ -175,6 +199,7 @@ export function setTemplate(t) { pushSnapshot(); state.template = t; notify(); }
 export function setFitMode(m) { pushSnapshot(); state.fitMode = m; notify(); }
 export function setPageSize(s) { pushSnapshot(); state.pageSize = s; notify(); }
 export function setOrientation(o) { pushSnapshot(); state.orientation = o; notify(); }
+export function setAutoOrient(v) { pushSnapshot(); state.autoOrient = v; notify(); }
 export function setTheme(t) { pushSnapshot(); Object.assign(state.theme, t); notify(); }
 export function toggleDarkMode() {
   state.darkMode = !state.darkMode;
@@ -359,6 +384,7 @@ export function exportState() {
     pageNumberStyle: state.pageNumberStyle,
     headerText: state.headerText,
     footerText: state.footerText,
+    autoOrient: state.autoOrient,
     savedAt: new Date().toISOString(),
   };
 }
@@ -384,5 +410,69 @@ export function importState(saved, imageMap) {
   state.pageNumberStyle = saved.pageNumberStyle || 'number';
   state.headerText = saved.headerText || '';
   state.footerText = saved.footerText || '';
+  state.autoOrient = saved.autoOrient || false;
+  notify();
+}
+
+// ====== 图片属性状态管理 ======
+export function setSelectedImage(imageId, props) {
+  state.selectedImageId = imageId;
+  if (props) {
+    state.selectedImageProps = { ...state.selectedImageProps, ...props };
+    state.originalAspectRatio = props.width / props.height;
+  }
+  notify();
+}
+
+export function clearSelectedImage() {
+  state.selectedImageId = null;
+  notify();
+}
+
+export function updateImageProps(props) {
+  if (!state.selectedImageId) return;
+  
+  const newProps = { ...state.selectedImageProps, ...props };
+  
+  // Handle lock ratio
+  if (state.lockRatio && (props.width || props.height)) {
+    if (props.width) {
+      newProps.height = Math.round(props.width / state.originalAspectRatio);
+    } else if (props.height) {
+      newProps.width = Math.round(props.height * state.originalAspectRatio);
+    }
+  }
+  
+  state.selectedImageProps = newProps;
+  
+  // Update the element in pages
+  const { pages, selectedPageId } = state;
+  const page = pages.find(p => p.id === selectedPageId);
+  if (page) {
+    const element = page.elements.find(el => el.id === state.selectedImageId);
+    if (element) {
+      Object.assign(element, newProps);
+    }
+  }
+  
+  notify();
+}
+
+export function setLockRatio(lock) {
+  state.lockRatio = lock;
+  if (lock) {
+    const { width, height } = state.selectedImageProps;
+    state.originalAspectRatio = width / height;
+  }
+  notify();
+}
+
+export function resetImageFilters() {
+  state.selectedImageProps = {
+    ...state.selectedImageProps,
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+  };
   notify();
 }
