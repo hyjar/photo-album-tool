@@ -6,6 +6,47 @@ import { getState, setSelectedPage, setSelectedElement, updateElement } from './
 import { getPagePixelSize } from './layoutEngine.js';
 import { el, throttle, mmToPx } from './utils.js';
 
+function applyImageProps(element, props) {
+  const {
+    width,
+    height,
+    rotation,
+    flipH,
+    flipV,
+    x,
+    y,
+    borderWidth,
+    borderColor,
+    borderRadius,
+    brightness,
+    contrast,
+    saturate,
+  } = props;
+
+  element.style.width = `${width}px`;
+  element.style.height = `${height}px`;
+
+  const transforms = [];
+  if (rotation) transforms.push(`rotate(${rotation}deg)`);
+  if (flipH) transforms.push('scaleX(-1)');
+  if (flipV) transforms.push('scaleY(-1)');
+  if (x || y) transforms.push(`translate(${x}px, ${y}px)`);
+
+  element.style.transform = transforms.join(' ') || 'none';
+
+  element.style.borderWidth = `${borderWidth}px`;
+  element.style.borderColor = borderColor;
+  element.style.borderStyle = borderWidth ? 'solid' : 'none';
+  element.style.borderRadius = `${borderRadius}px`;
+
+  const filters = [];
+  if (brightness !== 100) filters.push(`brightness(${brightness}%)`);
+  if (contrast !== 100) filters.push(`contrast(${contrast}%)`);
+  if (saturate !== 100) filters.push(`saturate(${saturate}%)`);
+
+  element.style.filter = filters.join(' ') || 'none';
+}
+
 let scale = 0.5;
 let _lastRenderKey = '';
 
@@ -257,14 +298,25 @@ export function renderPreview() {
     return;
   }
 
-  const { w: pageW, h: pageH } = getPagePixelSize();
+  const { w: defaultPageW, h: defaultPageH } = getPagePixelSize();
   const maxW = container.clientWidth || container.parentElement.clientWidth || 600;
-  scale = Math.min((maxW - 60) / pageW, 0.7);
+  // 计算所有页面的最大宽度（支持混合方向）
+  let maxPageW = defaultPageW;
+  pages.forEach(p => {
+    if (p.width && p.height) {
+      const pw = p.width * 3.7795;
+      if (pw > maxPageW) maxPageW = pw;
+    }
+  });
+  scale = Math.min((maxW - 60) / maxPageW, 0.7);
   scale = Math.max(scale, 0.05);
 
   const fragment = document.createDocumentFragment();
 
   pages.forEach((page, pageIdx) => {
+    // 使用页面自带尺寸（支持混合方向）
+    const pageW = (page.width || getState().pageSize.width) * 3.7795;
+    const pageH = (page.height || getState().pageSize.height) * 3.7795;
     const pageEl = el('div', {
       class: `preview-page ${page.id === selectedPageId ? 'selected' : ''}`,
       style: { width: `${pageW * scale}px`, height: `${pageH * scale}px` },
@@ -324,6 +376,33 @@ export function renderPreview() {
     const scrollTarget = container.parentElement || container;
     scrollTarget.scrollTop = scrollTop;
   }
+
+  // Apply image properties to preview elements
+  const { selectedImageId, selectedImageProps } = getState();
+  pages.forEach(page => {
+    page.elements.forEach(elem => {
+      if (elem.type === 'text') return;
+      const element = container.querySelector(`[data-elem-id="${elem.id}"]`);
+      if (element) {
+        const props = elem.id === selectedImageId ? selectedImageProps : {
+          width: elem.width || 100,
+          height: elem.height || 100,
+          rotation: elem.rotation || 0,
+          flipH: elem.flipH || false,
+          flipV: elem.flipV || false,
+          x: elem.x || 0,
+          y: elem.y || 0,
+          borderWidth: elem.borderWidth || 0,
+          borderColor: elem.borderColor || '#000000',
+          borderRadius: elem.borderRadius || 0,
+          brightness: elem.brightness || 100,
+          contrast: elem.contrast || 100,
+          saturate: elem.saturate || 100,
+        };
+        applyImageProps(element, props);
+      }
+    });
+  });
 }
 
 export const renderPreviewThrottled = throttle(renderPreview, 50);
