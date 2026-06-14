@@ -124,46 +124,52 @@ function renderWatermark(pageEl, scale) {
   const { watermark } = getState();
   if (!watermark || !watermark.enabled || !watermark.text) return;
 
-  const pageW = pageEl.offsetWidth;
-  const pageH = pageEl.offsetHeight;
+  // 使用页面的计算尺寸（来自 style.width/height）
+  const pageW = parseFloat(pageEl.style.width) || pageEl.offsetWidth;
+  const pageH = parseFloat(pageEl.style.height) || pageEl.offsetHeight;
   if (!pageW || !pageH) return;
 
   const container = document.createElement('div');
+  container.className = 'watermark-layer';
   container.style.cssText = `
     position: absolute;
     top: 0; left: 0;
-    width: ${pageW}px; height: ${pageH}px;
+    width: 100%; height: 100%;
     overflow: hidden;
     pointer-events: none;
     z-index: 5;
   `;
 
-  const fontSize = Math.max(12, (watermark.fontSize || 24) * scale);
-  const spacing = Math.max(40, (watermark.spacing || 200) * scale);
+  const fontSize = Math.max(12, (watermark.fontSize || 32) * scale);
+  const spacing = Math.max(40, (watermark.spacing || 150) * scale);
   const rotation = watermark.rotation || -30;
-  const opacity = watermark.opacity || 0.15;
-  const color = watermark.color || '#000000';
+  const opacity = watermark.opacity || 0.3;
+  const color = watermark.color || '#888888';
   const fontFamily = watermark.fontFamily || 'system-ui';
 
-  // 用 SVG 背景实现平铺水印（性能好，效果稳定）
+  // 用 SVG 背景实现平铺水印
   const text = watermark.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const svgW = spacing;
-  const svgH = spacing;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}">
-    <text x="${svgW/2}" y="${svgH/2}"
-      font-size="${fontSize}"
-      font-family="${fontFamily}"
-      fill="${color}"
-      fill-opacity="${opacity}"
-      text-anchor="middle"
-      dominant-baseline="middle"
-      transform="rotate(${rotation}, ${svgW/2}, ${svgH/2})"
-    >${text}</text>
-  </svg>`;
-  const encoded = btoa(unescape(encodeURIComponent(svg)));
-  container.style.backgroundImage = `url(data:image/svg+xml;base64,${encoded})`;
-  container.style.backgroundRepeat = 'repeat';
-  container.style.backgroundSize = `${svgW}px ${svgH}px`;
+  const svgW = Math.round(spacing);
+  const svgH = Math.round(spacing);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}">` +
+    `<text x="${svgW/2}" y="${svgH/2}"` +
+    ` font-size="${fontSize}"` +
+    ` font-family="${fontFamily}"` +
+    ` fill="${color}"` +
+    ` fill-opacity="${opacity}"` +
+    ` text-anchor="middle"` +
+    ` dominant-baseline="middle"` +
+    ` transform="rotate(${rotation}, ${svgW/2}, ${svgH/2})"` +
+    `>${text}</text></svg>`;
+
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(svg)));
+    container.style.backgroundImage = `url("data:image/svg+xml;base64,${encoded}")`;
+    container.style.backgroundRepeat = 'repeat';
+    container.style.backgroundSize = `${svgW}px ${svgH}px`;
+  } catch (e) {
+    console.warn('Watermark SVG encoding failed:', e);
+  }
 
   pageEl.appendChild(container);
 }
