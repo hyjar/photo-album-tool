@@ -855,6 +855,18 @@ body {
   -webkit-box-orient: vertical;
 }
 
+.meta-editable {
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 3px;
+  padding: 1px 4px;
+  transition: background 0.15s;
+}
+
+.meta-editable:hover {
+  background: rgba(67, 97, 238, 0.1);
+}
+
 /* ============ 自由画布标识 ============ */
 .page-canvas {
   width: 100%;

@@ -168,31 +168,28 @@ export async function exportPDF(options = {}) {
             }
             // 元数据（作品集模式）
             if (elem.showMeta === true) {
-              const exif = img.exif || {};
               const centerX = elem.x * scaleX + (elem.w * scaleX) / 2;
               let metaY = (elem.y + elem.h) * scaleY + 6;
               const maxTextW = pageSize.width * 0.85;
 
               // 第一行：相机型号
-              if (exif.camera) {
+              if (elem.metaCamera) {
                 pdf.setFontSize(10);
                 pdf.setTextColor(30, 30, 30);
-                const cameraText = exif.camera + (exif.lens ? ` · ${exif.lens}` : '');
-                pdf.text(cameraText, centerX, metaY, { align: 'center', maxWidth: maxTextW });
+                pdf.text(elem.metaCamera, centerX, metaY, { align: 'center', maxWidth: maxTextW });
                 metaY += 5;
               }
 
               // 第二行：拍摄参数
-              const params = [exif.aperture, exif.shutter, exif.iso, exif.focalLength].filter(Boolean);
-              if (params.length) {
+              if (elem.metaParams) {
                 pdf.setFontSize(8);
                 pdf.setTextColor(100, 100, 100);
-                pdf.text(params.join(' · '), centerX, metaY, { align: 'center' });
+                pdf.text(elem.metaParams, centerX, metaY, { align: 'center' });
                 metaY += 5;
               }
 
-              // 第三行：描述（从文件名自动生成或用户编辑）
-              const desc = elem.description || img.description || img.name.replace(/\.[^.]+$/, '');
+              // 第三行：描述
+              const desc = elem.description || img.name.replace(/\.[^.]+$/, '');
               if (desc) {
                 pdf.setFontSize(9);
                 pdf.setTextColor(60, 60, 60);

@@ -276,6 +276,11 @@ function layoutPortfolio(images, pageW, pageH) {
     const x = p + (usableW - w) / 2;
     const y = p + (imgAreaH - h) / 2;
 
+    // 从 EXIF 构建元数据
+    const exif = img.exif || {};
+    const camera = exif.camera ? exif.camera + (exif.lens ? ` · ${exif.lens}` : '') : '';
+    const params = [exif.aperture, exif.shutter, exif.iso, exif.focalLength].filter(Boolean).join(' · ');
+
     pages.push({
       id: uid(),
       elements: [{
@@ -283,7 +288,9 @@ function layoutPortfolio(images, pageW, pageH) {
         imageId: img.id,
         x, y, w, h,
         showMeta: true,
-        description: img.description || '',
+        metaCamera: camera,
+        metaParams: params,
+        description: img.description || img.name.replace(/\.[^.]+$/, ''),
       }],
       background: null,
     });

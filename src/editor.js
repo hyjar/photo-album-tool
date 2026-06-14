@@ -133,19 +133,9 @@ function onDblClick(e) {
         const newText = prompt('编辑文字:', elem.text || '');
         if (newText !== null) updateElement(page.id, elem.id, { text: newText });
       } else if (elem.imageId) {
-        // 作品集模式：编辑描述；否则编辑图注
-        if (elem.showMeta) {
-          const newDesc = prompt('编辑图片描述:', elem.description || '');
-          if (newDesc !== null) {
-            updateElement(page.id, elem.id, { description: newDesc });
-            // 同步更新 image 对象
-            const img = getState().images.find(i => i.id === elem.imageId);
-            if (img) img.description = newDesc;
-          }
-        } else {
-          const newCaption = prompt('编辑图注:', elem.caption || '');
-          if (newCaption !== null) updateElement(page.id, elem.id, { caption: newCaption });
-        }
+        // 双击图片编辑图注（作品集模式的元数据由 preview.js 处理）
+        const newCaption = prompt('编辑图注:', elem.caption || '');
+        if (newCaption !== null) updateElement(page.id, elem.id, { caption: newCaption });
       }
       return;
     }

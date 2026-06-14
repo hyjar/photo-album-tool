@@ -2,7 +2,7 @@
  * 页面预览渲染
  * 新增：页面背景、页码、页眉页脚、图注、文字叠加、自由画布
  */
-import { getState, setSelectedPage, setSelectedElement } from './state.js';
+import { getState, setSelectedPage, setSelectedElement, updateElement } from './state.js';
 import { getPagePixelSize } from './layoutEngine.js';
 import { el, throttle, mmToPx } from './utils.js';
 
@@ -131,39 +131,53 @@ function renderImageElement(elem, page, isSelected, scale) {
 
   // 元数据块（作品集模式）
   if (elem.showMeta === true) {
-    const exif = img.exif || {};
     const metaLines = [];
 
     // 第一行：相机型号
-    if (exif.camera) {
+    if (elem.metaCamera) {
       metaLines.push(el('div', {
-        class: 'meta-camera',
+        class: 'meta-camera meta-editable',
+        'data-meta-field': 'camera',
         style: { fontSize: `${11 * scale}px` },
-        textContent: exif.camera + (exif.lens ? ` · ${exif.lens}` : ''),
+        textContent: elem.metaCamera,
       }));
     }
 
     // 第二行：拍摄参数
-    const params = [exif.aperture, exif.shutter, exif.iso, exif.focalLength].filter(Boolean);
-    if (params.length) {
+    if (elem.metaParams) {
       metaLines.push(el('div', {
-        class: 'meta-params',
+        class: 'meta-params meta-editable',
+        'data-meta-field': 'params',
         style: { fontSize: `${9 * scale}px` },
-        textContent: params.join(' · '),
+        textContent: elem.metaParams,
       }));
     }
 
-    // 第三行：描述（从文件名自动生成或用户编辑）
-    const desc = elem.description || img.description || img.name.replace(/\.[^.]+$/, '');
-    if (desc) {
-      metaLines.push(el('div', {
-        class: 'meta-desc',
-        style: { fontSize: `${9 * scale}px` },
-        textContent: desc,
-      }));
-    }
+    // 第三行：描述
+    const desc = elem.description || img.name.replace(/\.[^.]+$/, '');
+    metaLines.push(el('div', {
+      class: 'meta-desc meta-editable',
+      'data-meta-field': 'description',
+      style: { fontSize: `${9 * scale}px` },
+      textContent: desc,
+    }));
 
     if (metaLines.length) {
+      // 双击编辑每行文字
+      metaLines.forEach(line => {
+        line.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const field = line.getAttribute('data-meta-field');
+          const current = line.textContent;
+          const labels = { camera: '设备信息', params: '拍摄参数', description: '图片描述' };
+          const newVal = prompt(`编辑${labels[field] || field}:`, current);
+          if (newVal !== null) {
+            const fieldMap = { camera: 'metaCamera', params: 'metaParams', description: 'description' };
+            updateElement(page.id, elem.id, { [fieldMap[field]]: newVal });
+          }
+        });
+      });
+
       const metaBlock = el('div', {
         class: 'portfolio-meta',
         style: { top: `${mmToPx(elem.y + elem.h) * scale + 4 * scale}px` },
