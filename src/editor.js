@@ -6,7 +6,7 @@
 import { getState, updateElement, setSelectedElement, setSelectedPage } from './state.js';
 import { getPagePixelSize } from './layoutEngine.js';
 import { clamp } from './utils.js';
-import { renderPreviewThrottled } from './preview.js';
+import { renderPreviewThrottled, forceRenderPreview } from './preview.js';
 
 let dragState = null;
 
@@ -53,11 +53,17 @@ function onMouseDown(e) {
       const s = getScale();
       const resizeThreshold = 20 / s;
       const isResize = (x > elem.x + elem.w - resizeThreshold) && (y > elem.y + elem.h - resizeThreshold);
+
+      // 找到对应的 DOM 元素用于拖动时直接更新
+      const domElement = canvas.querySelector(`[data-elem-id="${elem.id}"]`) ||
+        canvas.children[i];
+
       dragState = {
         elementId: elem.id, pageId: selectedPageId,
         startX: x, startY: y,
         origX: elem.x, origY: elem.y, origW: elem.w, origH: elem.h,
         isResize,
+        domElement,
       };
       e.preventDefault();
       return;
@@ -85,7 +91,16 @@ function onMouseMove(e) {
     elem.x = dragState.origX + dx;
     elem.y = dragState.origY + dy;
   }
-  renderPreviewThrottled();
+
+  // 直接更新 DOM 样式，不重建整个预览
+  if (dragState.domElement) {
+    const s = getScale();
+    const mmToPx = (mm) => mm * 3.7795;
+    dragState.domElement.style.left = `${mmToPx(elem.x) * s}px`;
+    dragState.domElement.style.top = `${mmToPx(elem.y) * s}px`;
+    dragState.domElement.style.width = `${mmToPx(elem.w) * s}px`;
+    dragState.domElement.style.height = `${mmToPx(elem.h) * s}px`;
+  }
 }
 
 function onMouseUp() {
@@ -101,6 +116,8 @@ function onMouseUp() {
       }
     }
     dragState = null;
+    // 强制重新渲染以更新元数据块等附属元素位置
+    forceRenderPreview();
   }
 }
 

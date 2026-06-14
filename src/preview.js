@@ -114,6 +114,7 @@ function renderImageElement(elem, page, isSelected, scale) {
 
   const wrapper = el('div', {
     class: `preview-element ${isSelected ? 'selected' : ''}`,
+    'data-elem-id': elem.id,
     style: {
       left: `${mmToPx(elem.x) * scale}px`,
       top: `${mmToPx(elem.y) * scale}px`,
@@ -202,6 +203,7 @@ function renderTextElement(elem, page, isSelected, scale) {
 
   const wrapper = el('div', {
     class: `preview-element preview-text-element ${isSelected ? 'selected' : ''}`,
+    'data-elem-id': elem.id,
     style: {
       left: `${mmToPx(elem.x) * scale}px`,
       top: `${mmToPx(elem.y) * scale}px`,
@@ -226,6 +228,9 @@ export function renderPreview() {
   const renderKey = getRenderKey();
   if (renderKey === _lastRenderKey) return;
   _lastRenderKey = renderKey;
+
+  // 保存滚动位置
+  const scrollTop = container.scrollTop || container.parentElement?.scrollTop || 0;
 
   const { pages, selectedPageId, selectedElementId } = getState();
   container.innerHTML = '';
@@ -296,6 +301,12 @@ export function renderPreview() {
   });
 
   container.appendChild(fragment);
+
+  // 恢复滚动位置
+  if (scrollTop > 0) {
+    const scrollTarget = container.parentElement || container;
+    scrollTarget.scrollTop = scrollTop;
+  }
 }
 
 export const renderPreviewThrottled = throttle(renderPreview, 50);
