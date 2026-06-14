@@ -239,6 +239,9 @@ export function renderPreview() {
   const container = document.getElementById('page-preview');
   if (!container) return;
 
+  // 拖动中跳过重渲染，避免销毁 canvas 导致拖动中断
+  if (window.__photoAlbumDragging) return;
+
   const renderKey = getRenderKey();
   if (renderKey === _lastRenderKey) return;
   _lastRenderKey = renderKey;
