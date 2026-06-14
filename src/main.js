@@ -382,19 +382,25 @@ function initRightSidebar() {
     updateImageProps({ y: parseInt(e.target.value) || 0 });
   });
 
-  document.getElementById('img-center')?.addEventListener('click', () => {
-    const { selectedPageId, selectedElementId, pages, pageSize, orientation } = getState();
+  document.getElementById('btn-center-h')?.addEventListener('click', () => {
+    const { selectedPageId, selectedElementId, pages, pageSize } = getState();
     if (!selectedPageId || !selectedElementId) return;
     const page = pages.find(p => p.id === selectedPageId);
     if (!page) return;
     const elem = page.elements.find(e => e.id === selectedElementId);
     if (!elem) return;
     const pw = page.width || pageSize.width;
+    updateImageProps({ x: Math.round(((pw - elem.w) / 2) * 10) / 10 });
+  });
+  document.getElementById('btn-center-v')?.addEventListener('click', () => {
+    const { selectedPageId, selectedElementId, pages, pageSize } = getState();
+    if (!selectedPageId || !selectedElementId) return;
+    const page = pages.find(p => p.id === selectedPageId);
+    if (!page) return;
+    const elem = page.elements.find(e => e.id === selectedElementId);
+    if (!elem) return;
     const ph = page.height || pageSize.height;
-    updateImageProps({
-      x: (pw - elem.w) / 2,
-      y: (ph - elem.h) / 2,
-    });
+    updateImageProps({ y: Math.round(((ph - elem.h) / 2) * 10) / 10 });
   });
 
   // Border controls

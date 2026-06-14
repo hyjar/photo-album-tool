@@ -1193,6 +1193,15 @@ body {
   background: rgba(67, 97, 238, 0.1);
 }
 
+.center-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.center-btns .small-btn {
+  flex: 1;
+}
+
 /* ============ 自由画布标识 ============ */
 .page-canvas {
   width: 100%;
