@@ -7,7 +7,8 @@ import {
   setTemplate, setFitMode, toggleDarkMode, setOrientation, setPageSize, setTheme,
   setPageNumber, setHeaderFooter, setPageBackground,
   addTextOverlay, toggleCaptions,
-  savePreset, deletePreset, renamePreset, applyPreset, setPages,
+  savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient,
+  updateImageProps, setLockRatio, resetImageFilters,
 } from './state.js';
 import { initImageLoader, renderThumbnailList } from './imageLoader.js';
 import { autoLayout, addTitlePage, addChapterPage, getPagePixelSize, createFreeCanvasPage } from './layoutEngine.js';
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPresets();
   initExportDialog();
   initKeyboardShortcuts();
+  initRightSidebar();
 
   const debouncedUpdate = debounce(() => {
     renderThumbnailList();
@@ -83,6 +85,17 @@ function initToolbar() {
     setOrientation(orientation === 'portrait' ? 'landscape' : 'portrait');
   });
 
+  // 竖横自适应
+  document.getElementById('btn-auto-orient').addEventListener('click', () => {
+    const { autoOrient } = getState();
+    setAutoOrient(!autoOrient);
+    const { images } = getState();
+    if (images.length) {
+      autoLayout();
+      showToast(autoOrient ? '已关闭自适应' : '竖图竖放、横图横放');
+    }
+  });
+
   // 自由画布
   document.getElementById('btn-free-canvas').addEventListener('click', () => {
     const { pages } = getState();
@@ -113,11 +126,12 @@ function initToolbar() {
 function updateToolbarState() {
   document.getElementById('btn-undo').disabled = !canUndo();
   document.getElementById('btn-redo').disabled = !canRedo();
-  const { orientation, darkMode, images, pages } = getState();
+  const { orientation, darkMode, images, pages, autoOrient } = getState();
   document.getElementById('btn-orientation').textContent = orientation === 'portrait' ? '竖向' : '横向';
   document.getElementById('btn-dark-mode').textContent = darkMode ? '☀️' : '🌙';
   document.getElementById('image-count').textContent = images.length ? `${images.length} 张` : '';
   document.getElementById('page-count').textContent = pages.length ? `${pages.length} 页` : '';
+  document.getElementById('btn-auto-orient').classList.toggle('active', autoOrient);
 }
 
 // ====== 模板 ======
@@ -300,4 +314,169 @@ function initKeyboardShortcuts() {
 
 function restoreDarkMode() {
   if (localStorage.getItem('photo-album-dark-mode') === 'true') toggleDarkMode();
+}
+
+// ====== 右侧面板 ======
+function initRightSidebar() {
+  const sidebar = document.getElementById('right-sidebar');
+  const closeBtn = document.getElementById('close-right-sidebar');
+
+  // Close button
+  closeBtn?.addEventListener('click', () => {
+    sidebar?.classList.remove('visible');
+    document.querySelector('.main-content')?.classList.remove('shifted');
+  });
+
+  // Size controls
+  const widthInput = document.getElementById('img-width');
+  const heightInput = document.getElementById('img-height');
+  const lockRatioBtn = document.getElementById('img-lock-ratio');
+
+  widthInput?.addEventListener('input', (e) => {
+    updateImageProps({ width: parseInt(e.target.value) || 100 });
+  });
+
+  heightInput?.addEventListener('input', (e) => {
+    updateImageProps({ height: parseInt(e.target.value) || 100 });
+  });
+
+  lockRatioBtn?.addEventListener('click', () => {
+    const { lockRatio } = getState();
+    setLockRatio(!lockRatio);
+    lockRatioBtn.classList.toggle('active', !lockRatio);
+  });
+
+  // Rotation controls
+  const rotationSlider = document.getElementById('img-rotation');
+  const rotationInput = document.getElementById('img-rotation-input');
+
+  rotationSlider?.addEventListener('input', (e) => {
+    const value = parseInt(e.target.value);
+    rotationInput.value = value;
+    updateImageProps({ rotation: value });
+  });
+
+  rotationInput?.addEventListener('input', (e) => {
+    const value = parseInt(e.target.value) || 0;
+    rotationSlider.value = value;
+    updateImageProps({ rotation: value });
+  });
+
+  // Flip controls
+  document.getElementById('img-flip-h')?.addEventListener('click', () => {
+    const { selectedImageProps } = getState();
+    updateImageProps({ flipH: !selectedImageProps.flipH });
+  });
+
+  document.getElementById('img-flip-v')?.addEventListener('click', () => {
+    const { selectedImageProps } = getState();
+    updateImageProps({ flipV: !selectedImageProps.flipV });
+  });
+
+  // Position controls
+  document.getElementById('img-x')?.addEventListener('input', (e) => {
+    updateImageProps({ x: parseInt(e.target.value) || 0 });
+  });
+
+  document.getElementById('img-y')?.addEventListener('input', (e) => {
+    updateImageProps({ y: parseInt(e.target.value) || 0 });
+  });
+
+  document.getElementById('img-center')?.addEventListener('click', () => {
+    updateImageProps({ x: 0, y: 0 });
+  });
+
+  // Border controls
+  document.getElementById('img-border-width')?.addEventListener('input', (e) => {
+    updateImageProps({ borderWidth: parseInt(e.target.value) || 0 });
+  });
+
+  document.getElementById('img-border-color')?.addEventListener('input', (e) => {
+    updateImageProps({ borderColor: e.target.value });
+  });
+
+  document.getElementById('img-border-radius')?.addEventListener('input', (e) => {
+    updateImageProps({ borderRadius: parseInt(e.target.value) || 0 });
+  });
+
+  // Filter controls
+  document.getElementById('img-brightness')?.addEventListener('input', (e) => {
+    updateImageProps({ brightness: parseInt(e.target.value) });
+  });
+
+  document.getElementById('img-contrast')?.addEventListener('input', (e) => {
+    updateImageProps({ contrast: parseInt(e.target.value) });
+  });
+
+  document.getElementById('img-saturate')?.addEventListener('input', (e) => {
+    updateImageProps({ saturate: parseInt(e.target.value) });
+  });
+
+  document.getElementById('img-reset-filters')?.addEventListener('click', () => {
+    resetImageFilters();
+  });
+
+  // Subscribe to state changes to update UI
+  subscribe(() => {
+    updateRightSidebarUI();
+  });
+}
+
+function updateRightSidebarUI() {
+  const { selectedImageId, selectedImageProps, lockRatio } = getState();
+
+  if (!selectedImageId) return;
+
+  // Update size controls
+  const widthInput = document.getElementById('img-width');
+  const heightInput = document.getElementById('img-height');
+  const lockRatioBtn = document.getElementById('img-lock-ratio');
+
+  if (widthInput) widthInput.value = selectedImageProps.width;
+  if (heightInput) heightInput.value = selectedImageProps.height;
+  if (lockRatioBtn) lockRatioBtn.classList.toggle('active', lockRatio);
+
+  // Update rotation controls
+  const rotationSlider = document.getElementById('img-rotation');
+  const rotationInput = document.getElementById('img-rotation-input');
+
+  if (rotationSlider) rotationSlider.value = selectedImageProps.rotation;
+  if (rotationInput) rotationInput.value = selectedImageProps.rotation;
+
+  // Update flip buttons
+  document.getElementById('img-flip-h')?.classList.toggle('active', selectedImageProps.flipH);
+  document.getElementById('img-flip-v')?.classList.toggle('active', selectedImageProps.flipV);
+
+  // Update position controls
+  const xInput = document.getElementById('img-x');
+  const yInput = document.getElementById('img-y');
+
+  if (xInput) xInput.value = selectedImageProps.x;
+  if (yInput) yInput.value = selectedImageProps.y;
+
+  // Update border controls
+  const borderWidthInput = document.getElementById('img-border-width');
+  const borderColorInput = document.getElementById('img-border-color');
+  const borderRadiusInput = document.getElementById('img-border-radius');
+
+  if (borderWidthInput) borderWidthInput.value = selectedImageProps.borderWidth;
+  if (borderColorInput) borderColorInput.value = selectedImageProps.borderColor;
+  if (borderRadiusInput) borderRadiusInput.value = selectedImageProps.borderRadius;
+
+  // Update filter controls
+  const brightnessSlider = document.getElementById('img-brightness');
+  const contrastSlider = document.getElementById('img-contrast');
+  const saturateSlider = document.getElementById('img-saturate');
+
+  if (brightnessSlider) brightnessSlider.value = selectedImageProps.brightness;
+  if (contrastSlider) contrastSlider.value = selectedImageProps.contrast;
+  if (saturateSlider) saturateSlider.value = selectedImageProps.saturate;
+
+  // Update image info
+  const { images } = getState();
+  const image = images.find(img => img.id === selectedImageId);
+  if (image) {
+    document.getElementById('img-filename').textContent = image.name || '-';
+    document.getElementById('img-dimensions').textContent = `${image.width}×${image.height}`;
+  }
 }
