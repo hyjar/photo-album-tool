@@ -383,7 +383,18 @@ function initRightSidebar() {
   });
 
   document.getElementById('img-center')?.addEventListener('click', () => {
-    updateImageProps({ x: 0, y: 0 });
+    const { selectedPageId, selectedElementId, pages, pageSize, orientation } = getState();
+    if (!selectedPageId || !selectedElementId) return;
+    const page = pages.find(p => p.id === selectedPageId);
+    if (!page) return;
+    const elem = page.elements.find(e => e.id === selectedElementId);
+    if (!elem) return;
+    const pw = page.width || pageSize.width;
+    const ph = page.height || pageSize.height;
+    updateImageProps({
+      x: (pw - elem.w) / 2,
+      y: (ph - elem.h) / 2,
+    });
   });
 
   // Border controls
