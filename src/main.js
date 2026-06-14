@@ -8,7 +8,7 @@ import {
   setPageNumber, setHeaderFooter, setPageBackground,
   addTextOverlay, toggleCaptions,
   savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient,
-  updateImageProps, setLockRatio, resetImageFilters,
+  updateImageProps, setLockRatio, resetImageFilters, updateElement,
 } from './state.js';
 import { initImageLoader, renderThumbnailList } from './imageLoader.js';
 import { autoLayout, addTitlePage, addChapterPage, getPagePixelSize, createFreeCanvasPage } from './layoutEngine.js';
@@ -390,7 +390,7 @@ function initRightSidebar() {
     const elem = page.elements.find(e => e.id === selectedElementId);
     if (!elem) return;
     const pw = page.width || pageSize.width;
-    updateImageProps({ x: Math.round(((pw - elem.w) / 2) * 10) / 10 });
+    updateElement(selectedPageId, selectedElementId, { x: Math.round(((pw - elem.w) / 2) * 10) / 10 });
   });
   document.getElementById('btn-center-v')?.addEventListener('click', () => {
     const { selectedPageId, selectedElementId, pages, pageSize } = getState();
@@ -400,7 +400,7 @@ function initRightSidebar() {
     const elem = page.elements.find(e => e.id === selectedElementId);
     if (!elem) return;
     const ph = page.height || pageSize.height;
-    updateImageProps({ y: Math.round(((ph - elem.h) / 2) * 10) / 10 });
+    updateElement(selectedPageId, selectedElementId, { y: Math.round(((ph - elem.h) / 2) * 10) / 10 });
   });
 
   // Border controls
