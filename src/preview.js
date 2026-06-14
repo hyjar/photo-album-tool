@@ -123,52 +123,47 @@ function renderWatermark(pageEl, scale) {
   const { watermark } = getState();
   if (!watermark || !watermark.enabled || !watermark.text) return;
 
+  const pageW = pageEl.offsetWidth;
+  const pageH = pageEl.offsetHeight;
+  if (!pageW || !pageH) return;
+
   const container = document.createElement('div');
-  container.className = 'watermark-layer';
   container.style.cssText = `
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0; left: 0;
+    width: ${pageW}px; height: ${pageH}px;
     overflow: hidden;
     pointer-events: none;
-    z-index: 10;
+    z-index: 5;
   `;
 
-  const fontSize = (watermark.fontSize || 24) * scale;
-  const spacing = (watermark.spacing || 200) * scale * 3.7795; // mm to px
+  const fontSize = Math.max(12, (watermark.fontSize || 24) * scale);
+  const spacing = Math.max(40, (watermark.spacing || 200) * scale);
   const rotation = watermark.rotation || -30;
   const opacity = watermark.opacity || 0.15;
   const color = watermark.color || '#000000';
   const fontFamily = watermark.fontFamily || 'system-ui';
 
-  // 创建重复水印图案
-  const pattern = document.createElement('div');
-  pattern.style.cssText = `
-    position: absolute;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: ${spacing}px;
-    transform: rotate(${rotation}deg);
-    opacity: ${opacity};
-  `;
+  // 用 SVG 背景实现平铺水印（性能好，效果稳定）
+  const text = watermark.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const svgW = spacing;
+  const svgH = spacing;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}">
+    <text x="${svgW/2}" y="${svgH/2}"
+      font-size="${fontSize}"
+      font-family="${fontFamily}"
+      fill="${color}"
+      fill-opacity="${opacity}"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      transform="rotate(${rotation}, ${svgW/2}, ${svgH/2})"
+    >${text}</text>
+  </svg>`;
+  const encoded = btoa(unescape(encodeURIComponent(svg)));
+  container.style.backgroundImage = `url(data:image/svg+xml;base64,${encoded})`;
+  container.style.backgroundRepeat = 'repeat';
+  container.style.backgroundSize = `${svgW}px ${svgH}px`;
 
-  // 计算需要多少水印文本
-  const count = Math.ceil((pageEl.offsetWidth * 3) / spacing) * Math.ceil((pageEl.offsetHeight * 3) / spacing);
-  for (let i = 0; i < Math.min(count, 200); i++) {
-    const span = document.createElement('span');
-    span.textContent = watermark.text;
-    span.style.cssText = `
-      font-size: ${fontSize}px;
-      color: ${color};
-      font-family: ${fontFamily};
-      white-space: nowrap;
-      user-select: none;
-    `;
-    pattern.appendChild(span);
-  }
-
-  container.appendChild(pattern);
   pageEl.appendChild(container);
 }
 
