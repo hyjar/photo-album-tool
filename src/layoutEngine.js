@@ -405,7 +405,7 @@ export function createFreeCanvasPage() {
 
 // ====== 主排版函数 ======
 export function autoLayout() {
-  const { images, template, autoOrient, classification } = getState();
+  const { images, template, autoOrient, canvasAutoOrient, classification } = getState();
   if (!images.length) return;
   const { w: pageW, h: pageH } = getPageMmSize();
 
@@ -415,14 +415,17 @@ export function autoLayout() {
     sortedImages = sortImagesByClassification(images, classification);
   }
 
+  // 是否旋转画布：autoOrient 开启且 canvasAutoOrient 开启
+  const rotateCanvas = autoOrient && canvasAutoOrient;
+
   let pages;
 
   switch (template) {
-    case 'single': pages = layoutSingle(sortedImages, pageW, pageH, autoOrient); break;
+    case 'single': pages = layoutSingle(sortedImages, pageW, pageH, rotateCanvas); break;
     case 'collage': pages = layoutCollage(sortedImages, pageW, pageH); break;
     case 'timeline': pages = layoutTimeline(sortedImages, pageW, pageH); break;
     case 'crosspage': pages = layoutCrossPage(sortedImages, pageW, pageH); break;
-    case 'portfolio': pages = layoutPortfolio(sortedImages, pageW, pageH, autoOrient); break;
+    case 'portfolio': pages = layoutPortfolio(sortedImages, pageW, pageH, rotateCanvas); break;
     case 'grid': default: pages = layoutGrid(sortedImages, pageW, pageH); break;
   }
 

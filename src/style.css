@@ -1292,6 +1292,18 @@ body {
   cursor: pointer;
 }
 
+.orient-btns {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.orient-btns .tool-btn.small {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
 .classify-toggle input {
   width: 14px;
   height: 14px;

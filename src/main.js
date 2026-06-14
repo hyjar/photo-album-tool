@@ -7,7 +7,7 @@ import {
   setTemplate, setFitMode, toggleDarkMode, setOrientation, setPageSize, setTheme,
   setPageNumber, setHeaderFooter, setPageBackground,
   addTextOverlay, toggleCaptions,
-  savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient,
+  savePreset, deletePreset, renamePreset, applyPreset, setPages, setAutoOrient, setCanvasAutoOrient,
   updateImageProps, setLockRatio, resetImageFilters, updateElement,
   setGridColumns, setClassificationEnabled, setClassificationMode,
   setClassificationResults, setAllPageBackgrounds,
@@ -100,11 +100,27 @@ function initToolbar() {
   document.getElementById('btn-auto-orient').addEventListener('click', () => {
     const { autoOrient } = getState();
     setAutoOrient(!autoOrient);
+    const canvasGroup = document.getElementById('canvas-orient-group');
+    if (canvasGroup) canvasGroup.style.display = !autoOrient ? 'inline-flex' : 'none';
     const { images } = getState();
     if (images.length) {
       autoLayout();
       showToast(autoOrient ? '已关闭自适应' : '竖图竖放、横图横放');
     }
+  });
+
+  // 画布自适应/固定
+  document.getElementById('btn-canvas-orient-on')?.addEventListener('click', () => {
+    setCanvasAutoOrient(true);
+    document.getElementById('btn-canvas-orient-on').classList.add('active');
+    document.getElementById('btn-canvas-orient-off').classList.remove('active');
+    if (getState().images.length) autoLayout();
+  });
+  document.getElementById('btn-canvas-orient-off')?.addEventListener('click', () => {
+    setCanvasAutoOrient(false);
+    document.getElementById('btn-canvas-orient-off').classList.add('active');
+    document.getElementById('btn-canvas-orient-on').classList.remove('active');
+    if (getState().images.length) autoLayout();
   });
 
   // 自由画布
@@ -137,12 +153,18 @@ function initToolbar() {
 function updateToolbarState() {
   document.getElementById('btn-undo').disabled = !canUndo();
   document.getElementById('btn-redo').disabled = !canRedo();
-  const { orientation, darkMode, images, pages, autoOrient } = getState();
+  const { orientation, darkMode, images, pages, autoOrient, canvasAutoOrient } = getState();
   document.getElementById('btn-orientation').textContent = orientation === 'portrait' ? '竖向' : '横向';
   document.getElementById('btn-dark-mode').textContent = darkMode ? '☀️' : '🌙';
   document.getElementById('image-count').textContent = images.length ? `${images.length} 张` : '';
   document.getElementById('page-count').textContent = pages.length ? `${pages.length} 页` : '';
   document.getElementById('btn-auto-orient').classList.toggle('active', autoOrient);
+
+  // 画布自适应按钮
+  const canvasGroup = document.getElementById('canvas-orient-group');
+  if (canvasGroup) canvasGroup.style.display = autoOrient ? 'inline-flex' : 'none';
+  document.getElementById('btn-canvas-orient-on')?.classList.toggle('active', canvasAutoOrient);
+  document.getElementById('btn-canvas-orient-off')?.classList.toggle('active', !canvasAutoOrient);
 }
 
 // ====== 模板 ======

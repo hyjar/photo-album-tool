@@ -40,6 +40,7 @@ const state = {
 
   // 新增：竖横自适应
   autoOrient: false,
+  canvasAutoOrient: true, // 画布是否也跟着自适应方向
 
   // 新增：网格列数
   gridColumns: 2,
@@ -110,6 +111,7 @@ function pushSnapshot() {
     headerText: state.headerText,
     footerText: state.footerText,
     autoOrient: state.autoOrient,
+    canvasAutoOrient: state.canvasAutoOrient,
     gridColumns: state.gridColumns,
     classification: deepClone(state.classification),
     headerStyle: { ...state.headerStyle },
@@ -135,6 +137,7 @@ function restoreSnapshot(snap) {
   state.headerText = snap.headerText;
   state.footerText = snap.footerText;
   state.autoOrient = snap.autoOrient || false;
+  state.canvasAutoOrient = snap.canvasAutoOrient !== undefined ? snap.canvasAutoOrient : true;
   state.gridColumns = snap.gridColumns || 2;
   if (snap.classification) state.classification = snap.classification;
   if (snap.headerStyle) Object.assign(state.headerStyle, snap.headerStyle);
@@ -241,6 +244,7 @@ export function setFitMode(m) { pushSnapshot(); state.fitMode = m; notify(); }
 export function setPageSize(s) { pushSnapshot(); state.pageSize = s; notify(); }
 export function setOrientation(o) { pushSnapshot(); state.orientation = o; notify(); }
 export function setAutoOrient(v) { pushSnapshot(); state.autoOrient = v; notify(); }
+export function setCanvasAutoOrient(v) { state.canvasAutoOrient = v; notify(); }
 export function setTheme(t) { pushSnapshot(); Object.assign(state.theme, t); notify(); }
 export function toggleDarkMode() {
   state.darkMode = !state.darkMode;
@@ -511,6 +515,7 @@ export function exportState() {
     headerText: state.headerText,
     footerText: state.footerText,
     autoOrient: state.autoOrient,
+    canvasAutoOrient: state.canvasAutoOrient,
     gridColumns: state.gridColumns,
     classification: deepClone(state.classification),
     headerStyle: { ...state.headerStyle },
@@ -542,6 +547,7 @@ export function importState(saved, imageMap) {
   state.headerText = saved.headerText || '';
   state.footerText = saved.footerText || '';
   state.autoOrient = saved.autoOrient || false;
+  state.canvasAutoOrient = saved.canvasAutoOrient !== undefined ? saved.canvasAutoOrient : true;
   state.gridColumns = saved.gridColumns || 2;
   if (saved.classification) state.classification = saved.classification;
   if (saved.headerStyle) Object.assign(state.headerStyle, saved.headerStyle);
