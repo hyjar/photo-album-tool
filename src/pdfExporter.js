@@ -97,7 +97,7 @@ function renderHeaderFooter(pdf, pageW) {
 export async function exportPDF(options = {}) {
   const { startPage = 1, endPage = null, fileName = null, returnBlob = false } = options;
   const PDFClass = await loadJsPDF();
-  const { pages, images, pageSize, orientation } = getState();
+  const { pages, images, pageSize } = getState();
 
   if (!pages.length) { alert('没有可导出的页面'); return; }
 
@@ -105,27 +105,40 @@ export async function exportPDF(options = {}) {
   const from = Math.max(1, Math.min(startPage, total));
   const to = endPage ? Math.min(endPage, total) : total;
 
+  // 第一页尺寸：使用页面自带尺寸或全局尺寸
+  const firstPage = pages[from - 1];
+  const fpW = firstPage.width || pageSize.width;
+  const fpH = firstPage.height || pageSize.height;
+  const fpOrient = fpW > fpH ? 'l' : 'p';
+
   const pdf = new PDFClass({
-    orientation: orientation === 'landscape' ? 'landscape' : 'portrait',
-    unit: 'mm', format: [pageSize.width, pageSize.height],
+    orientation: fpOrient,
+    unit: 'mm', format: [Math.min(fpW, fpH), Math.max(fpW, fpH)],
   });
 
   let first = true;
-  const { w: pagePixelW, h: pagePixelH } = getPagePixelSize();
-  const scaleX = pageSize.width / pagePixelW;
-  const scaleY = pageSize.height / pagePixelH;
 
   for (let i = from - 1; i < to; i++) {
     const page = pages[i];
     if (!page) continue;
-    if (!first) pdf.addPage([pageSize.width, pageSize.height], orientation === 'landscape' ? 'l' : 'p');
+    // 使用页面自带尺寸（支持混合方向）
+    const pw = page.width || pageSize.width;
+    const ph = page.height || pageSize.height;
+    const pOrient = pw > ph ? 'l' : 'p';
+
+    if (!first) pdf.addPage([Math.min(pw, ph), Math.max(pw, ph)], pOrient);
     first = false;
 
+    const pagePixelW = pw * 3.7795;
+    const pagePixelH = ph * 3.7795;
+    const scaleX = pw / pagePixelW;
+    const scaleY = ph / pagePixelH;
+
     // 背景
-    renderBackground(pdf, page.background, pageSize.width, pageSize.height);
+    renderBackground(pdf, page.background, pw, ph);
 
     // 页眉页脚
-    renderHeaderFooter(pdf, pageSize.width);
+    renderHeaderFooter(pdf, pw);
 
     if (page.isTextPage) {
       const text = page.text || '';
@@ -133,8 +146,8 @@ export async function exportPDF(options = {}) {
       pdf.setFontSize(style.fontSize || 48);
       pdf.setTextColor(style.color || '#000000');
       const align = style.textAlign || 'center';
-      const x = align === 'center' ? pageSize.width / 2 : (align === 'right' ? pageSize.width - 10 : 10);
-      pdf.text(text, x, pageSize.height / 2, { align });
+      const x = align === 'center' ? pw / 2 : (align === 'right' ? pw - 10 : 10);
+      pdf.text(text, x, ph / 2, { align });
     } else {
       for (const elem of page.elements) {
         if (elem.type === 'text') {
@@ -170,7 +183,7 @@ export async function exportPDF(options = {}) {
             if (elem.showMeta === true) {
               const centerX = elem.x * scaleX + (elem.w * scaleX) / 2;
               let metaY = (elem.y + elem.h) * scaleY + 6;
-              const maxTextW = pageSize.width * 0.85;
+              const maxTextW = pw * 0.85;
 
               // 第一行：相机型号
               if (elem.metaCamera) {
@@ -202,7 +215,7 @@ export async function exportPDF(options = {}) {
     }
 
     // 页码
-    renderPageNumber(pdf, i - from + 1, to - from + 1, pageSize.width, pageSize.height);
+    renderPageNumber(pdf, i - from + 1, to - from + 1, pw, ph);
   }
 
   let defaultName = fileName || `摄影集_${formatDate()}`;

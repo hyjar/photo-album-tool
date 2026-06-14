@@ -254,17 +254,23 @@ function layoutCrossPage(images, pageW, pageH) {
 }
 
 // ====== 作品集模式（每页一张居中，下方元数据） ======
-function layoutPortfolio(images, pageW, pageH) {
+function layoutPortfolio(images, pageW, pageH, autoOrient) {
   if (!images.length) return [];
   const pages = [];
   const p = pad();
-  const usableW = pageW - p * 2;
-  const metaAreaH = 20; // 元数据区域高度 mm（3行文字）
-  const gapBelowImg = 4; // 图片与元数据间距
-  const imgAreaH = pageH - p * 2 - metaAreaH - gapBelowImg;
+  const metaAreaH = 20;
+  const gapBelowImg = 4;
 
   for (const img of images) {
-    // 计算图片尺寸（contain 模式，居中于图片区域）
+    // auto-orient: landscape photos get landscape pages
+    let pw = pageW, ph = pageH;
+    if (autoOrient && img.naturalW && img.naturalH && img.naturalW > img.naturalH) {
+      pw = pageH; ph = pageW;
+    }
+
+    const usableW = pw - p * 2;
+    const imgAreaH = ph - p * 2 - metaAreaH - gapBelowImg;
+
     let w, h;
     if (img.aspectRatio > usableW / imgAreaH) {
       w = usableW;
@@ -276,13 +282,14 @@ function layoutPortfolio(images, pageW, pageH) {
     const x = p + (usableW - w) / 2;
     const y = p + (imgAreaH - h) / 2;
 
-    // 从 EXIF 构建元数据
     const exif = img.exif || {};
     const camera = exif.camera ? exif.camera + (exif.lens ? ` · ${exif.lens}` : '') : '';
     const params = [exif.aperture, exif.shutter, exif.iso, exif.focalLength].filter(Boolean).join(' · ');
 
     pages.push({
       id: uid(),
+      width: pw,
+      height: ph,
       elements: [{
         id: uid(),
         imageId: img.id,
@@ -310,7 +317,7 @@ export function createFreeCanvasPage() {
 
 // ====== 主排版函数 ======
 export function autoLayout() {
-  const { images, template } = getState();
+  const { images, template, autoOrient } = getState();
   if (!images.length) return;
   const { w: pageW, h: pageH } = getPageMmSize();
   let pages;
@@ -320,7 +327,7 @@ export function autoLayout() {
     case 'collage': pages = layoutCollage(images, pageW, pageH); break;
     case 'timeline': pages = layoutTimeline(images, pageW, pageH); break;
     case 'crosspage': pages = layoutCrossPage(images, pageW, pageH); break;
-    case 'portfolio': pages = layoutPortfolio(images, pageW, pageH); break;
+    case 'portfolio': pages = layoutPortfolio(images, pageW, pageH, autoOrient); break;
     case 'grid': default: pages = layoutGrid(images, pageW, pageH); break;
   }
 

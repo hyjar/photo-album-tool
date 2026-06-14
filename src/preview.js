@@ -27,9 +27,9 @@ function applyImageProps(element, props) {
   element.style.height = `${height}px`;
 
   const transforms = [];
-  if (rotation) transforms.push(`rotate(${rotation}deg)`);
   if (flipH) transforms.push('scaleX(-1)');
   if (flipV) transforms.push('scaleY(-1)');
+  if (rotation) transforms.push(`rotate(${rotation}deg)`);
   if (x || y) transforms.push(`translate(${x}px, ${y}px)`);
 
   element.style.transform = transforms.join(' ') || 'none';

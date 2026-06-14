@@ -616,7 +616,6 @@ body {
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
-  transition: all var(--transition-normal);
   flex-shrink: 0;
 }
 
@@ -660,7 +659,7 @@ body {
   overflow: hidden;
   border-radius: var(--radius-sm);
   cursor: move;
-  transition: all var(--transition-fast);
+  transform-origin: center center;
 }
 
 .preview-element:hover {
