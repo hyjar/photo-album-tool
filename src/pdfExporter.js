@@ -175,7 +175,8 @@ export async function exportPDF(options = {}) {
     renderPageNumber(pdf, i - from + 1, to - from + 1, pageSize.width, pageSize.height);
   }
 
-  const defaultName = fileName || `摄影集_${formatDate()}.pdf`;
+  let defaultName = fileName || `摄影集_${formatDate()}`;
+  if (!defaultName.endsWith('.pdf')) defaultName += '.pdf';
   if (returnBlob) return pdf.output('blob');
   try {
     if ('showSaveFilePicker' in window) {

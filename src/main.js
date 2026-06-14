@@ -262,12 +262,13 @@ function initExportDialog() {
   document.getElementById('export-close').addEventListener('click', () => dialog.classList.remove('visible'));
   document.getElementById('export-cancel').addEventListener('click', () => dialog.classList.remove('visible'));
   document.getElementById('export-confirm').addEventListener('click', async () => {
+    const fileName = document.getElementById('export-filename').value.trim() || undefined;
     const startPage = parseInt(document.getElementById('export-start').value) || 1;
     const endPage = parseInt(document.getElementById('export-end').value) || undefined;
     dialog.classList.remove('visible');
     showToast('正在导出 PDF...');
     try {
-      await exportPDF({ startPage, endPage });
+      await exportPDF({ startPage, endPage, fileName });
       showToast('PDF 导出完成');
     } catch (e) {
       console.error('导出失败:', e);
