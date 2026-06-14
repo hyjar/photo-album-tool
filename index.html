@@ -49,6 +49,10 @@
           <input type="file" id="file-input" multiple accept="image/*" hidden>
         </div>
         <div id="drop-zone" class="drop-zone">
+          <div id="import-progress" class="import-progress hidden">
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <span class="progress-text" id="progress-text">处理中 0/0</span>
+          </div>
           <div id="thumbnail-list" class="thumbnail-list">
             <div class="empty-hint">拖拽图片或文件夹到此处</div>
           </div>

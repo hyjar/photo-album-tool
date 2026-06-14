@@ -39,8 +39,8 @@ async function createResizedBlob(url, maxSize) {
   }
 }
 
-// 处理文件列表
-async function processFiles(files) {
+// 处理文件列表，onProgress(done, total) 可选回调
+async function processFiles(files, onProgress) {
   const imageFiles = Array.from(files)
     .filter(f => ACCEPTED_TYPES.includes(f.type))
     .sort((a, b) => a.size - b.size); // 小文件先处理，快速显示
@@ -48,6 +48,7 @@ async function processFiles(files) {
   if (imageFiles.length === 0) return [];
 
   const results = [];
+  const total = imageFiles.length;
   const BATCH = 2; // 每批处理数（大文件需要更少并发）
 
   for (let i = 0; i < imageFiles.length; i += BATCH) {
@@ -82,6 +83,10 @@ async function processFiles(files) {
 
     results.push(...batchResults.filter(Boolean));
 
+    // 报告进度
+    const done = Math.min(i + BATCH, total);
+    if (onProgress) onProgress(done, total);
+
     // 每批之间让出主线程
     if (i + BATCH < imageFiles.length) {
       await new Promise(r => setTimeout(r, 50));
@@ -98,6 +103,29 @@ async function processFiles(files) {
   return results;
 }
 
+// 进度条控制
+function showProgress() {
+  const bar = document.getElementById('import-progress');
+  const fill = document.getElementById('progress-fill');
+  const text = document.getElementById('progress-text');
+  bar.classList.remove('hidden');
+  fill.style.width = '0%';
+  text.textContent = '处理中...';
+}
+
+function updateProgress(done, total) {
+  const fill = document.getElementById('progress-fill');
+  const text = document.getElementById('progress-text');
+  const pct = Math.round((done / total) * 100);
+  fill.style.width = pct + '%';
+  text.textContent = `处理中 ${done}/${total}`;
+}
+
+function hideProgress() {
+  const bar = document.getElementById('import-progress');
+  bar.classList.add('hidden');
+}
+
 // 初始化图片导入
 export function initImageLoader() {
   const dropZone = document.getElementById('drop-zone');
@@ -106,8 +134,15 @@ export function initImageLoader() {
 
   selectBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async (e) => {
-    const images = await processFiles(e.target.files);
-    if (images.length) addImages(images);
+    const count = Array.from(e.target.files).filter(f =>
+      ['image/jpeg','image/png','image/webp','image/gif','image/bmp'].includes(f.type)
+    ).length;
+    if (count > 0) {
+      showProgress();
+      const images = await processFiles(e.target.files, updateProgress);
+      hideProgress();
+      if (images.length) addImages(images);
+    }
     fileInput.value = '';
   });
 
@@ -145,8 +180,15 @@ export function initImageLoader() {
       }
     }
 
-    const images = await processFiles(files);
-    if (images.length) addImages(images);
+    const validFiles = files.filter(f =>
+      ['image/jpeg','image/png','image/webp','image/gif','image/bmp'].includes(f.type)
+    );
+    if (validFiles.length > 0) {
+      showProgress();
+      const images = await processFiles(files, updateProgress);
+      hideProgress();
+      if (images.length) addImages(images);
+    }
   });
 }
 
