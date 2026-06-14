@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>摄影集排版工具</title>
+  <link rel="stylesheet" href="/src/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+</head>
+<body>
+  <!-- 顶部工具栏 -->
+  <header class="toolbar">
+    <div class="toolbar-left">
+      <h1 class="app-title">📷 摄影集排版</h1>
+      <span id="image-count" class="status-badge"></span>
+      <span id="page-count" class="status-badge"></span>
+    </div>
+    <div class="toolbar-center">
+      <button id="btn-undo" class="tool-btn" title="撤销 (Ctrl+Z)" disabled>↩</button>
+      <button id="btn-redo" class="tool-btn" title="重做 (Ctrl+Shift+Z)" disabled>↪</button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-auto-layout" class="tool-btn primary" title="自动排版">排版</button>
+      <button id="btn-add-title" class="tool-btn" title="添加标题页">标题页</button>
+      <button id="btn-add-chapter" class="tool-btn" title="添加章节页">章节页</button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-orientation" class="tool-btn" title="切换方向">竖向</button>
+    </div>
+    <div class="toolbar-right">
+      <button id="btn-save" class="tool-btn" title="保存项目 (Ctrl+S)">💾</button>
+      <button id="btn-load" class="tool-btn" title="加载项目 (Ctrl+O)">📂</button>
+      <button id="btn-export" class="tool-btn primary" title="导出 PDF">📄 导出</button>
+      <button id="btn-dark-mode" class="tool-btn" title="暗色模式">🌙</button>
+    </div>
+  </header>
+
+  <!-- 主体区域 -->
+  <main class="app-body">
+    <!-- 左侧边栏 -->
+    <aside class="sidebar">
+      <!-- 图片导入区 -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>图片素材</h3>
+          <button id="select-images-btn" class="small-btn">+ 添加</button>
+          <input type="file" id="file-input" multiple accept="image/*" hidden>
+        </div>
+        <div id="drop-zone" class="drop-zone">
+          <div id="thumbnail-list" class="thumbnail-list">
+            <div class="empty-hint">拖拽图片或文件夹到此处</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 排版模板 -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>排版模板</h3>
+        </div>
+        <div class="template-grid">
+          <button class="template-btn active" data-template="grid">
+            <span class="template-icon">▦</span>
+            <span class="template-label">网格</span>
+          </button>
+          <button class="template-btn" data-template="single">
+            <span class="template-icon">▣</span>
+            <span class="template-label">单页大图</span>
+          </button>
+          <button class="template-btn" data-template="collage">
+            <span class="template-icon">⊞</span>
+            <span class="template-label">拼贴</span>
+          </button>
+          <button class="template-btn" data-template="timeline">
+            <span class="template-icon">☷</span>
+            <span class="template-label">时间线</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 主题设置 -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>主题设置</h3>
+        </div>
+        <div class="theme-controls">
+          <label class="control-row">
+            <span>背景色</span>
+            <input type="color" id="theme-bg-color" value="#ffffff">
+          </label>
+          <label class="control-row">
+            <span>主题色</span>
+            <input type="color" id="theme-accent-color" value="#1a1a2e">
+          </label>
+          <label class="control-row">
+            <span>间距</span>
+            <input type="range" id="theme-spacing" min="0" max="20" value="4">
+          </label>
+          <label class="control-row">
+            <span>内边距</span>
+            <input type="range" id="theme-padding" min="0" max="30" value="10">
+          </label>
+          <label class="control-row">
+            <span>页面尺寸</span>
+            <select id="page-size-select">
+              <option value="a4" selected>A4</option>
+              <option value="a3">A3</option>
+              <option value="letter">Letter</option>
+            </select>
+          </label>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 主内容区 - 页面预览 -->
+    <div class="main-content">
+      <div id="page-preview" class="page-preview">
+        <div class="empty-preview">
+          <div class="empty-icon">📷</div>
+          <p>导入图片并点击"排版"开始创作</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 导出对话框 -->
+  <div id="export-dialog" class="dialog-overlay">
+    <div class="dialog">
+      <div class="dialog-header">
+        <h3>导出 PDF</h3>
+        <button id="export-close" class="dialog-close">×</button>
+      </div>
+      <div class="dialog-body">
+        <label class="dialog-field">
+          <span>起始页码</span>
+          <input type="number" id="export-start" value="1" min="1">
+        </label>
+        <label class="dialog-field">
+          <span>结束页码（留空为全部）</span>
+          <input type="number" id="export-end" min="1" placeholder="全部">
+        </label>
+        <label class="dialog-field">
+          <span>图片质量 (%)</span>
+          <input type="range" id="export-quality" min="50" max="100" value="92">
+          <span id="quality-value">92%</span>
+        </label>
+      </div>
+      <div class="dialog-footer">
+        <button id="export-cancel" class="btn-secondary">取消</button>
+        <button id="export-confirm" class="btn-primary">导出</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
