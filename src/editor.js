@@ -219,9 +219,9 @@ function onMouseDown(e) {
       });
       document.getElementById('right-sidebar')?.classList.add('visible');
       document.querySelector('.main-content')?.classList.add('shifted');
-      const s = getScale(canvas, page);
-      const resizeThreshold = 20 / s;
-      const isResize = (x > elem.x + elem.w - resizeThreshold) && (y > elem.y + elem.h - resizeThreshold);
+      // 缩放区域：右下角小角落，取元素短边的 15% 且不超过 8mm
+      const cornerSize = Math.min(Math.max(elem.w, elem.h) * 0.15, 8);
+      const isResize = (x > elem.x + elem.w - cornerSize) && (y > elem.y + elem.h - cornerSize);
 
       // 找到对应的 DOM 元素用于拖动时直接更新
       const domElement = canvas.querySelector(`[data-elem-id="${elem.id}"]`) ||

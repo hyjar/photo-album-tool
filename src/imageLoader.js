@@ -9,6 +9,7 @@
  */
 import { uid, loadImage, el } from './utils.js';
 import { addImages, removeImage, reorderImages, getState } from './state.js';
+import { autoLayout } from './layoutEngine.js';
 import exifr from 'exifr';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
@@ -218,7 +219,10 @@ export function initImageLoader() {
       showProgress();
       const images = await processFiles(e.target.files, updateProgress);
       hideProgress();
-      if (images.length) addImages(images);
+      if (images.length) {
+        addImages(images);
+        autoLayout();
+      }
     }
     fileInput.value = '';
   });
@@ -264,7 +268,10 @@ export function initImageLoader() {
       showProgress();
       const images = await processFiles(files, updateProgress);
       hideProgress();
-      if (images.length) addImages(images);
+      if (images.length) {
+        addImages(images);
+        autoLayout();
+      }
     }
   });
 }
