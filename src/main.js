@@ -342,9 +342,10 @@ function initExportDialog() {
     try {
       await exportPDF({
         startPage, endPage, fileName, quality, renderScale,
-        onProgress: (pct) => {
+        onProgress: (current, total) => {
+          const pct = Math.round((current / total) * 100);
           if (fill) fill.style.width = pct + '%';
-          if (text) text.textContent = `正在渲染第 ${pct} 页...`;
+          if (text) text.textContent = `正在渲染第 ${current}/${total} 页...`;
         }
       });
       text.textContent = '导出完成！';

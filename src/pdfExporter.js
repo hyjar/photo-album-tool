@@ -96,8 +96,7 @@ export async function exportPDF(options = {}) {
 
     // 进度回调
     if (onProgress) {
-      const pct = Math.round(((i - from + 2) / pageCount) * 100);
-      onProgress(pct);
+      onProgress(i - from + 2, pageCount);
     }
   }
 
