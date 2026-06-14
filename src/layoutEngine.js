@@ -89,7 +89,7 @@ function layoutSingle(images, pageW, pageH, autoOrient) {
   for (const img of images) {
     // 自适应方向：横图横放
     let pw = pageW, ph = pageH;
-    if (autoOrient && img.naturalW && img.naturalH && img.naturalW > img.naturalH) {
+    if (autoOrient && img.width && img.height && img.width > img.height) {
       pw = pageH; ph = pageW;
     }
     const usableW = pw - p * 2;
@@ -343,7 +343,7 @@ function layoutPortfolio(images, pageW, pageH, autoOrient) {
   for (const img of images) {
     // auto-orient: landscape photos get landscape pages
     let pw = pageW, ph = pageH;
-    if (autoOrient && img.naturalW && img.naturalH && img.naturalW > img.naturalH) {
+    if (autoOrient && img.width && img.height && img.width > img.height) {
       pw = pageH; ph = pageW;
     }
 
